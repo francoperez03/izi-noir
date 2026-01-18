@@ -1,0 +1,38 @@
+{
+  "name": "@izi-noir/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@izi-noir/sdk": "workspace:*",
+    "@solana/wallet-adapter-base": "^0.9.0",
+    "@solana/wallet-adapter-react": "^0.15.0",
+    "@solana/wallet-adapter-react-ui": "^0.9.0",
+    "@solana/wallet-adapter-wallets": "^0.19.0",
+    "@solana/web3.js": "^1.95.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@izi-noir/eslint-config": "workspace:*",
+    "@izi-noir/tsconfig": "workspace:*",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "rimraf": "^5.0.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0"
+  }
+}

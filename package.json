@@ -1,0 +1,35 @@
+{
+  "name": "izi-noir",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-preserving toolkit for Solana using Noir zero-knowledge proofs",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "build:sdk": "turbo build --filter=@izi-noir/sdk",
+    "build:contracts": "turbo build --filter=@izi-noir/solana-contracts",
+    "test": "turbo test",
+    "test:sdk": "turbo test --filter=@izi-noir/sdk",
+    "test:contracts": "turbo test --filter=@izi-noir/solana-contracts",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint:fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo clean && rm -rf node_modules",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "@izi-noir/eslint-config": "workspace:*",
+    "@izi-noir/prettier-config": "workspace:*",
+    "@izi-noir/tsconfig": "workspace:*",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

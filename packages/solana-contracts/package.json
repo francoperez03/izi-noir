@@ -1,0 +1,26 @@
+{
+  "name": "@izi-noir/solana-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Anchor-based Solana smart contracts for izi-noir",
+  "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "test:local": "anchor test --skip-local-validator",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "deploy:mainnet": "anchor deploy --provider.cluster mainnet",
+    "clean": "rm -rf target",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.30.0",
+    "@izi-noir/tsconfig": "workspace:*",
+    "@solana/web3.js": "^1.95.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^10.0.0",
+    "chai": "^4.3.0",
+    "mocha": "^10.4.0",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.4.0"
+  }
+}

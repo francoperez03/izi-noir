@@ -1,0 +1,7 @@
+{
+  "extends": "@izi-noir/tsconfig/node.json",
+  "compilerOptions": {
+    "types": ["mocha", "chai"]
+  },
+  "include": ["tests/**/*", "migrations/**/*"]
+}
