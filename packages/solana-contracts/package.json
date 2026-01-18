@@ -10,9 +10,14 @@
     "deploy:devnet": "anchor deploy --provider.cluster devnet",
     "deploy:mainnet": "anchor deploy --provider.cluster mainnet",
     "clean": "rm -rf target",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate-vectors": "npx tsx scripts/generate-test-vectors.ts"
+  },
+  "dependencies": {
+    "@izi-noir/sdk": "*"
   },
   "devDependencies": {
+    "tsx": "^4.7.0",
     "@coral-xyz/anchor": "^0.30.0",
     "@izi-noir/tsconfig": "*",
     "@solana/web3.js": "^1.95.0",
