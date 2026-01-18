@@ -1,6 +1,9 @@
 // High-level API (backwards compatible)
 export { createProof, createDefaultContainer } from './container.js';
 
+// Sunspot API (Groth16 for Solana)
+export { createSunspotProof, createSunspotContainer } from './container.js';
+
 // For DI users
 export { CreateProofUseCase } from './application/CreateProofUseCase.js';
 export type { CreateProofDependencies } from './application/CreateProofUseCase.js';
@@ -14,6 +17,16 @@ export type { IParser } from './domain/interfaces/IParser.js';
 export { AcornParser } from './infra/parser/AcornParser.js';
 export { NoirWasmCompiler } from './infra/compiler/NoirWasmCompiler.js';
 export { BarretenbergProver } from './infra/prover/BarretenbergProver.js';
+
+// Sunspot implementations
+export { SunspotCompiler } from './infra/compiler/SunspotCompiler.js';
+export { SunspotProver } from './infra/prover/SunspotProver.js';
+export type {
+  SunspotConfig,
+  SunspotCircuitPaths,
+  SunspotCompiledCircuit,
+} from './infra/sunspot/types.js';
+export { isSunspotCircuit, SunspotCliError } from './infra/sunspot/types.js';
 
 // Services
 export { generateNoir } from './application/services/NoirGenerator.js';
