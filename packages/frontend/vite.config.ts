@@ -9,4 +9,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: ["@noir-lang/noir_wasm", "@aztec/bb.js"],
+  },
 });

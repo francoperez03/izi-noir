@@ -1,11 +1,9 @@
 import { AcornParser } from './infra/parser/AcornParser.js';
 import { Barretenberg } from './infra/provingSystems/Barretenberg.js';
-import { Sunspot } from './infra/provingSystems/Sunspot.js';
 import { ArkworksWasm } from './infra/provingSystems/ArkworksWasm.js';
 import { CreateProofUseCase, type CreateProofDependencies } from './application/CreateProofUseCase.js';
 import type { IProvingSystem } from './domain/interfaces/proving/IProvingSystem.js';
 import type { CircuitFunction, InputValue, ProofResult } from './domain/types.js';
-import type { SunspotConfig } from './infra/sunspot/types.js';
 import type { ArkworksWasmConfig } from './infra/provingSystems/ArkworksWasm.js';
 
 export interface CreateProofOptions {
@@ -19,17 +17,6 @@ export function createDefaultContainer(): CreateProofDependencies {
   return {
     parser: new AcornParser(),
     provingSystem: new Barretenberg(),
-  };
-}
-
-/**
- * Create container with Sunspot backend (Groth16 for Solana)
- * Note: Sunspot requires CLI binaries (nargo, sunspot) - Node.js only
- */
-export function createSunspotContainer(config?: Partial<SunspotConfig>): CreateProofDependencies {
-  return {
-    parser: new AcornParser(),
-    provingSystem: new Sunspot(config),
   };
 }
 
@@ -63,10 +50,10 @@ export function createArkworksWasmContainer(config?: ArkworksWasmConfig): Create
  * const result = await createProof([100], [10], fn);
  * ```
  *
- * @example With Sunspot (Groth16 for Solana)
+ * @example With ArkworksWasm (Groth16 for Solana)
  * ```ts
  * const result = await createProof([100], [10], fn, {
- *   provingSystem: new Sunspot()
+ *   provingSystem: new ArkworksWasm()
  * });
  * ```
  */
@@ -82,21 +69,6 @@ export async function createProof(
   };
   const useCase = new CreateProofUseCase(container);
   return useCase.execute(publicInputs, privateInputs, circuitFn);
-}
-
-/**
- * Generate a ZK proof using Sunspot (Groth16 for Solana verification)
- * @deprecated Use createProof with { provingSystem: new Sunspot() } instead
- */
-export async function createSunspotProof(
-  publicInputs: InputValue[],
-  privateInputs: InputValue[],
-  circuitFn: CircuitFunction,
-  config?: Partial<SunspotConfig>
-): Promise<ProofResult> {
-  return createProof(publicInputs, privateInputs, circuitFn, {
-    provingSystem: new Sunspot(config),
-  });
 }
 
 /**

@@ -2,14 +2,10 @@
 export {
   createProof,
   createDefaultContainer,
-  createSunspotContainer,
   createArkworksWasmContainer,
   createArkworksProof,
 } from './container.js';
 export type { CreateProofOptions } from './container.js';
-
-// Deprecated - use createProof with { provingSystem: new Sunspot() } instead
-export { createSunspotProof } from './container.js';
 
 // For DI users
 export { CreateProofUseCase } from './application/CreateProofUseCase.js';
@@ -17,7 +13,6 @@ export type { CreateProofDependencies } from './application/CreateProofUseCase.j
 
 // Proving systems
 export { Barretenberg } from './infra/provingSystems/Barretenberg.js';
-export { Sunspot } from './infra/provingSystems/Sunspot.js';
 export { ArkworksWasm, isArkworksCircuit } from './infra/provingSystems/ArkworksWasm.js';
 export type {
   ArkworksWasmConfig,
@@ -38,14 +33,6 @@ export type { IParser } from './domain/interfaces/parsing/index.js';
 
 // Parser implementation
 export { AcornParser } from './infra/parser/AcornParser.js';
-
-// Sunspot types
-export type {
-  SunspotConfig,
-  SunspotCircuitPaths,
-  SunspotCompiledCircuit,
-} from './infra/sunspot/types.js';
-export { isSunspotCircuit, SunspotCliError } from './infra/sunspot/types.js';
 
 // Services
 export { generateNoir } from './application/services/NoirGenerator.js';
