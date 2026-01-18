@@ -1,4 +1,4 @@
-import type { ParsedCircuit, Expr, Statement } from './types.js';
+import type { ParsedCircuit, Expr, Statement } from '../../domain/entities/circuit.js';
 
 export function generateNoir(circuit: ParsedCircuit): string {
   const params = generateParams(circuit);
