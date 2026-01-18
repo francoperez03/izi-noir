@@ -1,14 +1,12 @@
-import type { IParser } from '../domain/interfaces/IParser.js';
-import type { ICompiler } from '../domain/interfaces/ICompiler.js';
-import type { IProver } from '../domain/interfaces/IProver.js';
+import type { IParser } from '../domain/interfaces/parsing/IParser.js';
+import type { IProvingSystem } from '../domain/interfaces/proving/IProvingSystem.js';
 import type { CircuitFunction, InputValue, ProofResult, InputMap } from '../domain/types.js';
 import type { InputValue as NoirInputValue } from '@noir-lang/types';
 import { generateNoir } from './services/NoirGenerator.js';
 
 export interface CreateProofDependencies {
   parser: IParser;
-  compiler: ICompiler;
-  prover: IProver;
+  provingSystem: IProvingSystem;
 }
 
 export class CreateProofUseCase {
@@ -42,7 +40,7 @@ export class CreateProofUseCase {
 
     // 3. Compile Noir to bytecode
     const compileStart = performance.now();
-    const circuit = await this.deps.compiler.compile(noirCode);
+    const circuit = await this.deps.provingSystem.compile(noirCode);
     timings.compileMs = performance.now() - compileStart;
 
     // 4. Build inputs object for witness generation
@@ -63,7 +61,7 @@ export class CreateProofUseCase {
 
     // 5. Generate witness and proof
     const witnessStart = performance.now();
-    const { proof, publicInputs: proofPublicInputs } = await this.deps.prover.generateProof(circuit, inputs);
+    const { proof, publicInputs: proofPublicInputs } = await this.deps.provingSystem.generateProof(circuit, inputs);
     const proofEnd = performance.now();
 
     // Split timing: witness is typically faster, proof takes most time
@@ -73,7 +71,7 @@ export class CreateProofUseCase {
 
     // 6. Verify proof
     const verifyStart = performance.now();
-    const verified = await this.deps.prover.verifyProof(circuit, proof, proofPublicInputs);
+    const verified = await this.deps.provingSystem.verifyProof(circuit, proof, proofPublicInputs);
     timings.verifyMs = performance.now() - verifyStart;
 
     timings.totalMs = performance.now() - totalStart;

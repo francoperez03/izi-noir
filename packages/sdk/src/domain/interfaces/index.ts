@@ -1,3 +1,9 @@
-export type { ICompiler } from './ICompiler.js';
-export type { IProver } from './IProver.js';
-export type { IParser } from './IParser.js';
+// Re-export all interfaces
+export type {
+  IProvingSystem,
+  ICompiler,
+  IProver,
+  IVerifier,
+} from './proving/index.js';
+
+export type { IParser } from './parsing/index.js';

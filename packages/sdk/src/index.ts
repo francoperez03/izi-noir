@@ -1,26 +1,31 @@
-// High-level API (backwards compatible)
-export { createProof, createDefaultContainer } from './container.js';
+// High-level API
+export { createProof, createDefaultContainer, createSunspotContainer } from './container.js';
+export type { CreateProofOptions } from './container.js';
 
-// Sunspot API (Groth16 for Solana)
-export { createSunspotProof, createSunspotContainer } from './container.js';
+// Deprecated - use createProof with { provingSystem: new Sunspot() } instead
+export { createSunspotProof } from './container.js';
 
 // For DI users
 export { CreateProofUseCase } from './application/CreateProofUseCase.js';
 export type { CreateProofDependencies } from './application/CreateProofUseCase.js';
 
+// Proving systems
+export { Barretenberg } from './infra/provingSystems/Barretenberg.js';
+export { Sunspot } from './infra/provingSystems/Sunspot.js';
+
 // Interfaces
-export type { ICompiler } from './domain/interfaces/ICompiler.js';
-export type { IProver } from './domain/interfaces/IProver.js';
-export type { IParser } from './domain/interfaces/IParser.js';
+export type {
+  IProvingSystem,
+  ICompiler,
+  IProver,
+  IVerifier,
+} from './domain/interfaces/proving/index.js';
+export type { IParser } from './domain/interfaces/parsing/index.js';
 
-// Infrastructure implementations (for custom DI)
+// Parser implementation
 export { AcornParser } from './infra/parser/AcornParser.js';
-export { NoirWasmCompiler } from './infra/compiler/NoirWasmCompiler.js';
-export { BarretenbergProver } from './infra/prover/BarretenbergProver.js';
 
-// Sunspot implementations
-export { SunspotCompiler } from './infra/compiler/SunspotCompiler.js';
-export { SunspotProver } from './infra/prover/SunspotProver.js';
+// Sunspot types
 export type {
   SunspotConfig,
   SunspotCircuitPaths,

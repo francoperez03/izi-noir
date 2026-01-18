@@ -2,7 +2,7 @@
  * Test Sunspot backend for Groth16 proof generation
  * Generates proofs compatible with Solana on-chain verification
  */
-import { createSunspotProof } from '../src/index.js';
+import { createProof, Sunspot } from '../src/index.js';
 
 // Path to sunspot binary (built from Go source)
 const SUNSPOT_PATH = '/Users/francoperez/repos/proyectos-lokos/solana-privacy/sunspot/go/sunspot';
@@ -19,7 +19,8 @@ async function main() {
   console.log('Private inputs:', privateInputs);
 
   try {
-    const result = await createSunspotProof(
+    // Using new API with provingSystem option
+    const result = await createProof(
       publicInputs,
       privateInputs,
       ([expected], [secret]) => {
@@ -27,8 +28,10 @@ async function main() {
         assert(secret * secret == expected);
       },
       {
-        sunspotBinaryPath: SUNSPOT_PATH,
-        keepArtifacts: false,
+        provingSystem: new Sunspot({
+          sunspotBinaryPath: SUNSPOT_PATH,
+          keepArtifacts: false,
+        }),
       }
     );
 

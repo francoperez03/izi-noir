@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
-import type { IParser } from '../../domain/interfaces/IParser.js';
+import type { IParser } from '../../domain/interfaces/parsing/IParser.js';
 import type {
   ParsedCircuit,
   CircuitParam,
