@@ -1,107 +1,69 @@
-# IZI-NOIR Project
+# CLAUDE.md
 
-## Overview
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-IZI-NOIR is a privacy-preserving toolkit for Solana blockchain, utilizing Noir zero-knowledge proofs. This monorepo contains the SDK, frontend application, Solana smart contracts, and Claude agent skills.
+## Project Overview
 
-## Project Structure
+IZI-NOIR is a privacy-preserving toolkit for Solana. The core SDK transpiles JavaScript functions with `assert()` statements into Noir ZK circuits, compiles them, and generates/verifies proofs.
 
-```
-izi-noir/
-├── packages/
-│   ├── frontend/          # Vite + React web application
-│   ├── sdk/               # @izi-noir/sdk (npm package)
-│   ├── solana-contracts/  # Anchor-based Solana programs
-│   └── agent-skills/      # Claude agent skills
-└── tooling/               # Shared configurations
-```
-
-## Quick Start
+## Commands
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development
-npm run dev
-
-# Build all packages
-npm run build
-
-# Run tests
-npm test
+npm install              # Install all workspace dependencies
+npm run build            # Build all packages
+npm test                 # Run all tests
+npm run build:sdk        # Build only SDK
+npm run test:sdk         # Test only SDK
+npm run build:contracts  # Build Solana contracts
+npm run lint             # Lint all packages
+npm run format           # Format with Prettier
 ```
 
-## Development Commands
-
-### Monorepo Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start all packages in dev mode |
-| `npm run build` | Build all packages |
-| `npm test` | Run all tests |
-| `npm run lint` | Lint all packages |
-| `npm run format` | Format all files with Prettier |
-| `npm run clean` | Clean all build outputs |
-
-### Package-Specific Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run build:sdk` | Build only the SDK |
-| `npm run build:contracts` | Build Solana contracts |
-| `npm run test:sdk` | Test SDK only |
-| `npm run test:contracts` | Test Solana contracts |
-
-## Architecture Principles
-
-1. **Privacy First** - All user data handling must preserve privacy guarantees
-2. **Type Safety** - Use TypeScript strictly; avoid `any` types
-3. **Test Coverage** - Maintain high test coverage for SDK and contracts
-4. **Minimal Dependencies** - Keep dependencies lean and auditable
-
-## Package Dependencies
+## Architecture
 
 ```
-frontend --> sdk --> solana-contracts (IDL types)
+packages/
+├── sdk/               # @izi-noir/sdk - JS to Noir transpiler
+├── frontend/          # Vite + React web app
+├── solana-contracts/  # Anchor programs
+└── agent-skills/      # Claude Code skills
+tooling/               # Shared tsconfig, eslint, prettier
 ```
 
-## Technology Stack
+## SDK Pipeline
 
-- **Monorepo**: npm workspaces + Turborepo
-- **Frontend**: Vite + React + TypeScript + Tailwind
-- **SDK**: TypeScript + tsup (ESM/CJS)
-- **Contracts**: Anchor + Rust
-- **Testing**: Vitest (SDK), Anchor test (Contracts)
+The SDK transforms JS assertions into ZK proofs:
 
-## Environment Setup
+```
+JS Function → Parse AST → Generate Noir → Compile → Prove → Verify
+```
 
-1. Node.js 22.12.0+
-2. Install Rust and Solana CLI
-3. Install Anchor CLI
-4. Run `npm install`
+**Example usage:**
+```typescript
+const result = await createProof(
+  [100],           // public inputs
+  [10],            // private inputs
+  ([expected], [secret]) => {
+    assert(secret * secret == expected);
+  }
+);
+// result.verified === true
+```
 
-## Code Style
+**Key files:**
+- `packages/sdk/src/parser.ts` - Parses JS function AST using acorn
+- `packages/sdk/src/generator.ts` - Generates Noir code from AST
+- `packages/sdk/src/compiler.ts` - Compiles Noir using @noir-lang/noir_wasm
+- `packages/sdk/src/prover.ts` - Generates/verifies proofs using @aztec/bb.js
+- `packages/sdk/src/createProof.ts` - Main API that orchestrates the pipeline
 
-- ESLint and Prettier configs in `tooling/`
-- Anchor conventions for Solana programs
-- React hooks and functional components in frontend
+## Key Dependencies
 
-## Key Files
+- **@noir-lang/*** - Noir compiler and runtime (nightly versions required)
+- **@aztec/bb.js** - Barretenberg proving backend
+- **acorn** - JavaScript parser for AST extraction
 
-| File | Purpose |
-|------|---------|
-| `packages/sdk/src/index.ts` | SDK exports |
-| `packages/sdk/src/createProof.ts` | Main proof creation API |
-| `packages/sdk/src/parser.ts` | JS to Noir parser |
-| `packages/sdk/src/generator.ts` | Noir code generator |
-| `packages/sdk/src/prover.ts` | Proof generation/verification |
-| `packages/solana-contracts/programs/izi-noir/src/lib.rs` | Main Solana program |
-| `packages/frontend/src/App.tsx` | Frontend entry component |
+## Requirements
 
-## Agent Skills
-
-See `packages/agent-skills/` for Claude coding assistance skills:
-- `solana-anchor` - Anchor development patterns
-- `noir-circuits` - Zero-knowledge circuit design
+- Node.js 22.12.0+ (required for Noir WASM)
+- Rust + Solana CLI + Anchor CLI (for contracts only)
