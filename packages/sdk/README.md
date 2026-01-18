@@ -1,155 +1,198 @@
-# noir-from-js
+# @izi-noir/sdk
 
 Write ZK circuits in JavaScript/TypeScript, generate Noir code and proofs automatically.
 
 ## Installation
 
 ```bash
-npm install noir-from-js
+npm install @izi-noir/sdk
 ```
 
-## Usage
+## Quick Start
 
 ```typescript
-import { createProof } from 'noir-from-js';
+import { IziNoir, Provider } from '@izi-noir/sdk';
 
-// Prove that you know a secret whose square equals the public value
+// Initialize with your preferred proving backend
+const izi = await IziNoir.init({ provider: Provider.Barretenberg });
+
+// Create a proof
+const { proof, verified } = await izi.createProof(
+  // Noir code (or use createProof helper for JS → Noir)
+  `fn main(secret: Field, expected: pub Field) {
+    assert(secret * secret == expected);
+  }`,
+  { secret: '10', expected: '100' }
+);
+
+console.log('Proof verified:', verified);
+```
+
+## Providers
+
+| Provider | Proof Size | Environment | Notes |
+|----------|-----------|-------------|-------|
+| `Barretenberg` | ~16KB | Browser + Node.js | UltraHonk, default |
+| `Arkworks` | ~256 bytes | Browser + Node.js | Groth16, smallest proofs |
+| `Sunspot` | ~256 bytes | Node.js only | Groth16, CLI-based |
+
+```typescript
+// Barretenberg (default, browser-compatible)
+const bb = await IziNoir.init({ provider: Provider.Barretenberg });
+
+// Arkworks (smallest proofs, browser-compatible)
+const ark = await IziNoir.init({ provider: Provider.Arkworks });
+
+// Sunspot (Node.js only, requires CLI tools)
+import { IziNoirSunspot } from '@izi-noir/sdk/sunspot';
+const sunspot = await IziNoirSunspot.init({
+  pkPath: './circuit.pk',
+  vkPath: './circuit.vk',
+  circuitPath: './circuit.json',
+});
+```
+
+## JS → Noir Transpilation
+
+Write circuits in JavaScript and transpile to Noir:
+
+```typescript
+import { createProof } from '@izi-noir/sdk';
+
 const result = await createProof(
   [100],        // public inputs
-  [10],         // private inputs (the secret)
+  [10],         // private inputs
   ([expected], [secret]) => {
     assert(secret * secret == expected);
   }
 );
 
-console.log('Proof verified:', result.verified);
-console.log('Generated Noir code:', result.noirCode);
+console.log('Verified:', result.verified);
+console.log('Generated Noir:', result.noirCode);
 ```
 
-## API
+## Supported JS Patterns
 
-### `createProof(publicInputs, privateInputs, circuitFn)`
+| JavaScript | Noir | Notes |
+|------------|------|-------|
+| `assert(cond)` | `assert(cond)` | Core assertion |
+| `==` / `===` | `==` | Equality |
+| `!=` / `!==` | `!=` | Inequality |
+| `+`, `-`, `*`, `/`, `%` | Same | Arithmetic |
+| `<`, `>`, `<=`, `>=` | Same | Comparison |
+| `&&` | `&` | **Converted to bitwise** |
+| `\|\|` | `\|` | **Converted to bitwise** |
+| `let x = expr` | `let x: Field = expr` | Immutable |
+| `let mut_x = expr` | `let mut x: Field = expr` | Mutable (prefix convention) |
+| `if/else` | `if/else` | Conditionals |
+| `for (i < n)` | `for i in 0..n` | Loops |
+| `[a, b, c]` | `[Field; 3]` | Arrays |
+| `arr.length` | `arr.len()` | Length |
+| `cond ? a : b` | `if cond { a } else { b }` | Ternary |
 
-Generates a ZK proof from a JavaScript function.
+## AI Agent Skills
 
-**Parameters:**
-- `publicInputs: (number | string | bigint)[]` - Values that will be public in the proof
-- `privateInputs: (number | string | bigint)[]` - Values that remain private (the witness)
-- `circuitFn: (pub, priv) => void` - Circuit logic using `assert()` statements
+This SDK includes an AI agent skill for Claude Code and other compatible agents. The skill teaches AI assistants the correct patterns for writing JS/TS code that transpiles to valid Noir circuits.
 
-**Returns:** `Promise<ProofResult>`
+### Install the Skill
 
-```typescript
-interface ProofResult {
-  proof: Uint8Array;
-  publicInputs: string[];
-  verified: boolean;
-  noirCode: string;
-  timings: {
-    parseMs: number;
-    generateMs: number;
-    compileMs: number;
-    witnessMs: number;
-    proofMs: number;
-    verifyMs: number;
-    totalMs: number;
-  };
-}
+```bash
+# Using add-skill CLI (recommended)
+npx add-skill github:your-org/izi-noir -s izi-noir-circuit-patterns
+
+# Or manually copy to your project
+cp -r packages/agent-skills/izi-noir-circuit-patterns .claude/skills/
 ```
 
-## Supported Operations
+### What the Skill Provides
 
-| JavaScript | Noir |
-|-----------|------|
-| `assert(condition)` | `assert(condition);` |
-| `a == b` or `a === b` | `a == b` |
-| `a != b` or `a !== b` | `a != b` |
-| `a + b` | `a + b` |
-| `a - b` | `a - b` |
-| `a * b` | `a * b` |
-| `a / b` | `a / b` |
+- **Function signature requirements** - Correct `([public], [private]) => {}` pattern
+- **Operator mapping** - Which JS operators work and how they convert
+- **Mutability convention** - Using `mut_` prefix for mutable variables
+- **Type mapping** - JS types to Noir `Field`, `bool`, arrays
+- **Unsupported features** - What to avoid (objects, async, closures, etc.)
+- **Working examples** - 10+ complete JS → Noir examples
+
+### Using with Claude Code
+
+Once installed, the skill auto-activates when you:
+- Write circuit functions
+- Use `createProof()`
+- Ask about "JS to Noir" or "assert statements"
+
+Example prompt: *"Help me write a circuit that proves I know a preimage"*
 
 ## Examples
 
-### Simple equality proof
+### Simple Equality
 
 ```typescript
 const result = await createProof(
-  [42],
-  [42],
+  [42], [42],
   ([pub], [priv]) => {
     assert(pub == priv);
   }
 );
 ```
 
-### Arithmetic proof
+### Sum with Loop
 
 ```typescript
 const result = await createProof(
-  [15],           // public: sum
-  [10, 5],        // private: a, b
-  ([sum], [a, b]) => {
-    assert(a + b == sum);
+  [10], [1, 2, 3, 4],
+  ([expected], [a, b, c, d]) => {
+    let arr = [a, b, c, d];
+    let mut_sum = 0;
+    for (let i = 0; i < 4; i++) {
+      mut_sum = mut_sum + arr[i];
+    }
+    assert(mut_sum == expected);
   }
 );
 ```
 
-### Multiple assertions
+### Conditional Logic
 
 ```typescript
 const result = await createProof(
-  [100, 10],
-  [50, 50],
-  ([total, min], [a, b]) => {
-    assert(a + b == total);
-    assert(a != 0);
-    assert(b != 0);
+  [5], [10],
+  ([threshold], [value]) => {
+    let result = value > threshold ? 1 : 0;
+    assert(result == 1);
   }
 );
 ```
 
-## How it works
+## How It Works
 
-1. **Parse**: Extracts the function AST using Acorn
-2. **Generate**: Converts JS AST to Noir source code
-3. **Compile**: Compiles Noir to bytecode using `@noir-lang/noir_wasm`
-4. **Prove**: Generates ZK proof using `@aztec/bb.js` (UltraHonk)
-5. **Verify**: Verifies the generated proof
+1. **Parse** - Extracts JS function AST using Acorn
+2. **Generate** - Converts to Noir source code
+3. **Compile** - Compiles Noir via `@noir-lang/noir_wasm`
+4. **Prove** - Generates ZK proof with selected backend
+5. **Verify** - Verifies the generated proof
 
-## Advanced Usage
+## Browser Usage (Vite)
 
-You can also use individual functions for more control:
+For Vite projects, initialize WASM manually:
 
 ```typescript
-import {
-  parseCircuitFunction,
-  generateNoir,
-  compileNoir,
-  generateProof,
-  verifyProof
-} from 'noir-from-js';
+import initNoirC from "@noir-lang/noirc_abi";
+import initACVM from "@noir-lang/acvm_js";
+import acvm from "@noir-lang/acvm_js/web/acvm_js_bg.wasm?url";
+import noirc from "@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url";
+import { IziNoir, Provider, markWasmInitialized } from "@izi-noir/sdk";
 
-// Parse JS function
-const parsed = parseCircuitFunction(myFn, publicInputs, privateInputs);
+// Initialize WASM with Vite URLs
+await Promise.all([initACVM(fetch(acvm)), initNoirC(fetch(noirc))]);
+markWasmInitialized();
 
-// Generate Noir code
-const noirCode = generateNoir(parsed);
-console.log(noirCode);
-
-// Compile to bytecode
-const circuit = await compileNoir(noirCode);
-
-// Generate proof
-const { proof, publicInputs } = await generateProof(circuit, inputs);
-
-// Verify
-const valid = await verifyProof(circuit, proof, publicInputs);
+// Now use IziNoir
+const izi = await IziNoir.init({ provider: Provider.Barretenberg });
 ```
 
 ## Requirements
 
-- Node.js >= 18.0.0
+- Node.js >= 22.12.0
 
 ## License
 

@@ -6,6 +6,7 @@ export default defineConfig({
     "src/providers/barretenberg.ts",
     "src/providers/arkworks.ts",
     "src/providers/sunspot.ts",
+    "src/providers/solana.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,

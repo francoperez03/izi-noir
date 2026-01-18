@@ -23,6 +23,10 @@
     "./sunspot": {
       "types": "./dist/providers/sunspot.d.ts",
       "import": "./dist/providers/sunspot.js"
+    },
+    "./solana": {
+      "types": "./dist/providers/solana.d.ts",
+      "import": "./dist/providers/solana.js"
     }
   },
   "files": ["dist", "README.md", "LICENSE"],
