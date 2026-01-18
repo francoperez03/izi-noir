@@ -1,5 +1,11 @@
 // High-level API
-export { createProof, createDefaultContainer, createSunspotContainer } from './container.js';
+export {
+  createProof,
+  createDefaultContainer,
+  createSunspotContainer,
+  createArkworksWasmContainer,
+  createArkworksProof,
+} from './container.js';
 export type { CreateProofOptions } from './container.js';
 
 // Deprecated - use createProof with { provingSystem: new Sunspot() } instead
@@ -12,6 +18,14 @@ export type { CreateProofDependencies } from './application/CreateProofUseCase.j
 // Proving systems
 export { Barretenberg } from './infra/provingSystems/Barretenberg.js';
 export { Sunspot } from './infra/provingSystems/Sunspot.js';
+export { ArkworksWasm, isArkworksCircuit } from './infra/provingSystems/ArkworksWasm.js';
+export type {
+  ArkworksWasmConfig,
+  ArkworksCompiledCircuit,
+  ArkworksWasmModule,
+  ArkworksSetupResult,
+  ArkworksProofResult,
+} from './infra/provingSystems/ArkworksWasm.js';
 
 // Interfaces
 export type {

@@ -1,0 +1,38 @@
+{
+  "name": "@izi-noir/arkworks-groth16-wasm",
+  "version": "0.1.0",
+  "description": "WASM bindings for Groth16 proving using arkworks, compatible with gnark-verifier-solana",
+  "type": "module",
+  "main": "pkg/arkworks_groth16_wasm.js",
+  "module": "pkg/arkworks_groth16_wasm.js",
+  "types": "pkg/arkworks_groth16_wasm.d.ts",
+  "files": [
+    "pkg/"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target web --out-dir pkg",
+    "build:nodejs": "wasm-pack build --target nodejs --out-dir pkg-nodejs",
+    "build:bundler": "wasm-pack build --target bundler --out-dir pkg-bundler",
+    "test": "cargo test",
+    "test:wasm": "wasm-pack test --headless --chrome",
+    "clean": "rm -rf pkg pkg-nodejs pkg-bundler target"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/izi-noir/izi-noir.git",
+    "directory": "packages/arkworks-groth16-wasm"
+  },
+  "keywords": [
+    "zkp",
+    "groth16",
+    "arkworks",
+    "wasm",
+    "solana",
+    "noir",
+    "zero-knowledge"
+  ],
+  "author": "IZI-NOIR Team",
+  "license": "MIT OR Apache-2.0",
+  "devDependencies": {},
+  "peerDependencies": {}
+}

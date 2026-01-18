@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@aztec/bb.js": "3.0.0-devnet.20251212",
+    "@izi-noir/arkworks-groth16-wasm": "*",
     "@noir-lang/noir_js": "1.0.0-beta.13-1d260df.nightly",
     "@noir-lang/noir_wasm": "1.0.0-beta.13-1d260df.nightly",
     "@noir-lang/types": "1.0.0-beta.13-1d260df.nightly",
