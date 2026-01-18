@@ -1,13 +1,9 @@
 import { useState, useEffect } from "react";
 import { WalletProvider } from "./components/WalletProvider";
-import {
-  createProof,
-  Barretenberg,
-  ArkworksWasm,
-  type InputValue,
-} from "@izi-noir/sdk";
+import { IziNoir, Provider, createProof, markWasmInitialized, type InputValue } from "@izi-noir/sdk";
 
-// Noir WASM initialization for browser
+// Browser WASM initialization - required for Vite bundling
+// The SDK's initNoirWasm() doesn't know about Vite's bundled WASM URLs
 import initNoirC from "@noir-lang/noirc_abi";
 import initACVM from "@noir-lang/acvm_js";
 import acvm from "@noir-lang/acvm_js/web/acvm_js_bg.wasm?url";
@@ -15,6 +11,16 @@ import noirc from "@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url";
 
 // Declare assert for circuit functions (parsed by SDK, not executed)
 declare function assert(condition: boolean): void;
+
+// Initialize WASM once for the browser
+let wasmInitialized = false;
+async function initBrowserWasm() {
+  if (wasmInitialized) return;
+  await Promise.all([initACVM(fetch(acvm)), initNoirC(fetch(noirc))]);
+  // Tell SDK that WASM is already initialized (so IziNoir.init() won't re-init)
+  markWasmInitialized();
+  wasmInitialized = true;
+}
 
 interface ProofResultDisplay {
   backend: string;
@@ -29,23 +35,16 @@ function App() {
   const [results, setResults] = useState<ProofResultDisplay[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize Noir WASM modules
+  // Initialize WASM on mount
   useEffect(() => {
-    const init = async () => {
-      try {
-        await Promise.all([initACVM(fetch(acvm)), initNoirC(fetch(noirc))]);
-        setInitialized(true);
-      } catch (err) {
-        setError(
-          `Failed to initialize Noir: ${err instanceof Error ? err.message : String(err)}`
-        );
-      }
-    };
-    init();
+    initBrowserWasm()
+      .then(() => setInitialized(true))
+      .catch((err) =>
+        setError(`Failed to initialize: ${err instanceof Error ? err.message : String(err)}`)
+      );
   }, []);
 
   // Circuito de ejemplo: secret^2 == expected
-  // Uses destructuring pattern: ([publicInputs], [privateInputs])
   const circuitFn = ([expected]: InputValue[], [secret]: InputValue[]) => {
     assert((secret as number) * (secret as number) == expected);
   };
@@ -57,14 +56,18 @@ function App() {
     console.log(`[${backend}] Starting proof generation...`);
 
     try {
-      const provingSystem =
-        backend === "barretenberg" ? new Barretenberg() : new ArkworksWasm();
+      // IziNoir.init() - WASM already initialized above
+      const izi = await IziNoir.init({
+        provider:
+          backend === "barretenberg" ? Provider.Barretenberg : Provider.Arkworks,
+      });
 
       console.log(`[${backend}] Compiling circuit...`);
       const start = performance.now();
 
+      // Use legacy API with the initialized proving system
       const result = await createProof([100], [10], circuitFn, {
-        provingSystem,
+        provingSystem: izi.getProvingSystem(),
       });
 
       const elapsed = performance.now() - start;

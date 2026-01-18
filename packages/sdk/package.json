@@ -11,6 +11,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./barretenberg": {
+      "types": "./dist/providers/barretenberg.d.ts",
+      "import": "./dist/providers/barretenberg.js"
+    },
+    "./arkworks": {
+      "types": "./dist/providers/arkworks.d.ts",
+      "import": "./dist/providers/arkworks.js"
+    },
+    "./sunspot": {
+      "types": "./dist/providers/sunspot.d.ts",
+      "import": "./dist/providers/sunspot.js"
     }
   },
   "files": ["dist", "README.md", "LICENSE"],

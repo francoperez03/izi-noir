@@ -1,29 +1,132 @@
-import { readFile, writeFile, rm } from 'node:fs/promises';
+import { readFile, writeFile, rm, mkdtemp, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { IProvingSystem } from '../../domain/interfaces/proving/IProvingSystem.js';
 import type { CompiledCircuit, InputMap, ProofData } from '../../domain/types.js';
 import type { SunspotConfig, SunspotCircuitPaths, SunspotCompiledCircuit } from '../sunspot/types.js';
 import { DEFAULT_SUNSPOT_CONFIG, isSunspotCircuit, SunspotCliError } from '../sunspot/types.js';
 import { SunspotCliExecutor } from '../sunspot/SunspotCliExecutor.js';
-import { createNoirProject } from './shared/noirProjectUtils.js';
+import type { CircuitPaths } from '../../domain/types/provider.js';
+
+/**
+ * Configuration for Sunspot constructor
+ */
+export interface SunspotInitConfig extends Partial<SunspotConfig> {
+  /** Pre-compiled circuit paths (if provided, compile() is disabled) */
+  precompiledPaths?: CircuitPaths;
+}
 
 /**
  * Sunspot proving system using CLI tools.
  * Node.js only (requires nargo and sunspot binaries).
  * Produces Groth16 proofs (~324 bytes) for Solana on-chain verification.
+ *
+ * Can be used in two modes:
+ * 1. Full compilation: Call compile() with Noir code (requires nargo + sunspot CLI)
+ * 2. Pre-compiled: Provide circuitPaths in constructor, then only prove/verify
+ *
+ * @example Full compilation
+ * ```typescript
+ * const sunspot = new Sunspot();
+ * const circuit = await sunspot.compile(noirCode);
+ * const proof = await sunspot.generateProof(circuit, inputs);
+ * ```
+ *
+ * @example Pre-compiled (via IziNoir)
+ * ```typescript
+ * const izi = await IziNoir.init({
+ *   provider: Provider.Sunspot,
+ *   circuitPaths: { pkPath: '...', vkPath: '...', circuitPath: '...' }
+ * });
+ * ```
  */
 export class Sunspot implements IProvingSystem {
   private readonly config: SunspotConfig;
   private readonly executor: SunspotCliExecutor;
+  private readonly precompiledPaths?: CircuitPaths;
+  private precompiledCircuit?: SunspotCompiledCircuit;
 
-  constructor(config: Partial<SunspotConfig> = {}) {
-    this.config = { ...DEFAULT_SUNSPOT_CONFIG, ...config };
+  /**
+   * Create a new Sunspot proving system
+   * @param config - Configuration options or pre-compiled circuit paths
+   */
+  constructor(config: SunspotInitConfig | CircuitPaths = {}) {
+    // Check if config is CircuitPaths (has pkPath, vkPath, circuitPath)
+    if ('pkPath' in config && 'vkPath' in config && 'circuitPath' in config) {
+      this.config = { ...DEFAULT_SUNSPOT_CONFIG };
+      this.precompiledPaths = config as CircuitPaths;
+    } else {
+      const initConfig = config as SunspotInitConfig;
+      this.config = { ...DEFAULT_SUNSPOT_CONFIG, ...initConfig };
+      this.precompiledPaths = initConfig.precompiledPaths;
+    }
+
     this.executor = new SunspotCliExecutor(this.config);
+
+    // If pre-compiled paths provided, create a dummy circuit object
+    if (this.precompiledPaths) {
+      this.precompiledCircuit = this.createPrecompiledCircuit(this.precompiledPaths);
+    }
+  }
+
+  /**
+   * Create a SunspotCompiledCircuit from pre-compiled paths
+   */
+  private createPrecompiledCircuit(paths: CircuitPaths): SunspotCompiledCircuit {
+    const baseDir = dirname(paths.circuitPath);
+    return {
+      bytecode: '', // Not needed for prove/verify with pre-compiled
+      abi: { parameters: [], return_type: null, error_types: {} },
+      debug_symbols: '',
+      file_map: {},
+      __sunspot: true,
+      paths: {
+        workDir: baseDir,
+        noirProjectDir: baseDir,
+        circuitJsonPath: paths.circuitPath,
+        witnessPath: join(baseDir, 'circuit.gz'),
+        ccsPath: join(baseDir, 'circuit.ccs'),
+        pkPath: paths.pkPath,
+        vkPath: paths.vkPath,
+        proofPath: join(baseDir, 'circuit.proof'),
+        publicWitnessPath: join(baseDir, 'circuit.pw'),
+        proverTomlPath: join(baseDir, 'Prover.toml'),
+      },
+    };
+  }
+
+  /**
+   * Create a temporary Noir project for compilation
+   */
+  private async createNoirProject(noirCode: string, packageName: string): Promise<{ rootDir: string }> {
+    const rootDir = await mkdtemp(join(tmpdir(), 'sunspot-circuit-'));
+    const srcDir = join(rootDir, 'src');
+    await mkdir(srcDir, { recursive: true });
+
+    const nargoToml = `[package]
+name = "${packageName}"
+type = "bin"
+authors = [""]
+
+[dependencies]
+`;
+
+    await writeFile(join(rootDir, 'Nargo.toml'), nargoToml);
+    await writeFile(join(srcDir, 'main.nr'), noirCode);
+
+    return { rootDir };
   }
 
   async compile(noirCode: string): Promise<CompiledCircuit> {
+    if (this.precompiledPaths) {
+      throw new Error(
+        'Sunspot was initialized with pre-compiled circuit paths. ' +
+        'compile() is not available. Use generateProof() and verifyProof() directly.'
+      );
+    }
+
     // 1. Create temp Noir project
-    const project = await createNoirProject(noirCode, 'sunspot-circuit-', 'circuit');
+    const project = await this.createNoirProject(noirCode, 'circuit');
     const targetDir = join(project.rootDir, 'target');
 
     // 2. Run nargo compile → circuit.json
@@ -74,13 +177,16 @@ export class Sunspot implements IProvingSystem {
   }
 
   async generateProof(circuit: CompiledCircuit, inputs: InputMap): Promise<ProofData> {
-    if (!isSunspotCircuit(circuit)) {
+    // Use precompiled circuit if available and circuit is empty/default
+    const circuitToUse = this.resolveCircuit(circuit);
+
+    if (!isSunspotCircuit(circuitToUse)) {
       throw new Error(
         'Sunspot.generateProof requires a SunspotCompiledCircuit. Use Sunspot.compile() first.'
       );
     }
 
-    const paths = circuit.paths;
+    const paths = circuitToUse.paths;
 
     try {
       // 1. Write Prover.toml with inputs
@@ -122,13 +228,16 @@ export class Sunspot implements IProvingSystem {
     proof: Uint8Array,
     publicInputs: string[]
   ): Promise<boolean> {
-    if (!isSunspotCircuit(circuit)) {
+    // Use precompiled circuit if available and circuit is empty/default
+    const circuitToUse = this.resolveCircuit(circuit);
+
+    if (!isSunspotCircuit(circuitToUse)) {
       throw new Error(
         'Sunspot.verifyProof requires a SunspotCompiledCircuit. Use Sunspot.compile() first.'
       );
     }
 
-    const paths = circuit.paths;
+    const paths = circuitToUse.paths;
 
     try {
       // Use existing .proof and .pw files from generateProof
@@ -157,6 +266,24 @@ export class Sunspot implements IProvingSystem {
         await rm(paths.workDir, { recursive: true, force: true }).catch(() => {});
       }
     }
+  }
+
+  /**
+   * Resolve which circuit to use - precompiled or provided
+   */
+  private resolveCircuit(circuit: CompiledCircuit): CompiledCircuit {
+    // If circuit is a proper SunspotCompiledCircuit, use it
+    if (isSunspotCircuit(circuit)) {
+      return circuit;
+    }
+
+    // If we have precompiled paths, use those
+    if (this.precompiledCircuit) {
+      return this.precompiledCircuit;
+    }
+
+    // Otherwise, return the provided circuit (will fail validation)
+    return circuit;
   }
 
   private generateProverToml(inputs: InputMap): string {

@@ -43,3 +43,7 @@ test-ledger/
 *.tsbuildinfo
 
 .claude/
+
+playwright
+playwright-report
+test-results

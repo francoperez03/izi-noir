@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('ZK Proof Generation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    // Wait for WASM initialization (either message disappears or buttons become enabled)
+    // Wait for WASM initialization (message disappears when ready)
     await page.waitForFunction(() => {
       const initText = document.body.textContent?.includes('Inicializando Noir WASM');
       return !initText;
