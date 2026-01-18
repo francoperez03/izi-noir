@@ -1,7 +1,7 @@
 {
   "name": "@izi-noir/sdk",
   "version": "0.1.0",
-  "description": "TypeScript SDK for izi-noir privacy protocol on Solana",
+  "description": "Write ZK circuits in JavaScript/TypeScript, generate Noir code and proofs automatically",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -17,26 +17,53 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "tsx test/example.ts",
+    "test:vitest": "vitest run",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.95.0"
+    "@aztec/bb.js": "3.0.0-devnet.20251212",
+    "@noir-lang/noir_js": "1.0.0-beta.13-1d260df.nightly",
+    "@noir-lang/noir_wasm": "1.0.0-beta.13-1d260df.nightly",
+    "@noir-lang/types": "1.0.0-beta.13-1d260df.nightly",
+    "acorn": "^8.14.0",
+    "acorn-walk": "^8.3.4"
   },
   "devDependencies": {
-    "@izi-noir/eslint-config": "workspace:*",
-    "@izi-noir/tsconfig": "workspace:*",
+    "@izi-noir/eslint-config": "*",
+    "@izi-noir/tsconfig": "*",
+    "@types/node": "^22.0.0",
     "rimraf": "^5.0.0",
     "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "@aztec/bb.js": ">=3.0.0-devnet.0"
   },
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["solana", "privacy", "noir", "zero-knowledge", "zk"]
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "keywords": [
+    "noir",
+    "zero-knowledge",
+    "zk",
+    "zkp",
+    "proof",
+    "circuit",
+    "transpiler",
+    "barretenberg",
+    "aztec",
+    "solana"
+  ],
+  "author": "Franco Perez",
+  "license": "MIT"
 }

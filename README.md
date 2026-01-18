@@ -15,8 +15,7 @@ Privacy-preserving toolkit for Solana using Noir zero-knowledge proofs.
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 9+
+- Node.js 22.12.0+
 - Rust (for Solana contracts)
 - Solana CLI
 - Anchor CLI
@@ -29,28 +28,28 @@ git clone https://github.com/your-org/izi-noir.git
 cd izi-noir
 
 # Install dependencies
-pnpm install
+npm install
 
 # Build all packages
-pnpm build
+npm run build
 ```
 
 ### Development
 
 ```bash
 # Start development mode
-pnpm dev
+npm run dev
 
 # Run tests
-pnpm test
+npm test
 
 # Lint code
-pnpm lint
+npm run lint
 ```
 
 ## Architecture
 
-The project uses a monorepo structure managed by pnpm workspaces and Turborepo:
+The project uses a monorepo structure managed by npm workspaces and Turborepo:
 
 - **packages/** - All packages (frontend, sdk, contracts, agent-skills)
 - **tooling/** - Shared configurations

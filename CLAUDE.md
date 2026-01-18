@@ -20,16 +20,16 @@ izi-noir/
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
 # Start development
-pnpm dev
+npm run dev
 
 # Build all packages
-pnpm build
+npm run build
 
 # Run tests
-pnpm test
+npm test
 ```
 
 ## Development Commands
@@ -38,21 +38,21 @@ pnpm test
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start all packages in dev mode |
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run all tests |
-| `pnpm lint` | Lint all packages |
-| `pnpm format` | Format all files with Prettier |
-| `pnpm clean` | Clean all build outputs |
+| `npm run dev` | Start all packages in dev mode |
+| `npm run build` | Build all packages |
+| `npm test` | Run all tests |
+| `npm run lint` | Lint all packages |
+| `npm run format` | Format all files with Prettier |
+| `npm run clean` | Clean all build outputs |
 
 ### Package-Specific Commands
 
 | Command | Description |
 |---------|-------------|
-| `pnpm build:sdk` | Build only the SDK |
-| `pnpm build:contracts` | Build Solana contracts |
-| `pnpm test:sdk` | Test SDK only |
-| `pnpm test:contracts` | Test Solana contracts |
+| `npm run build:sdk` | Build only the SDK |
+| `npm run build:contracts` | Build Solana contracts |
+| `npm run test:sdk` | Test SDK only |
+| `npm run test:contracts` | Test Solana contracts |
 
 ## Architecture Principles
 
@@ -69,7 +69,7 @@ frontend --> sdk --> solana-contracts (IDL types)
 
 ## Technology Stack
 
-- **Monorepo**: pnpm workspaces + Turborepo
+- **Monorepo**: npm workspaces + Turborepo
 - **Frontend**: Vite + React + TypeScript + Tailwind
 - **SDK**: TypeScript + tsup (ESM/CJS)
 - **Contracts**: Anchor + Rust
@@ -77,10 +77,10 @@ frontend --> sdk --> solana-contracts (IDL types)
 
 ## Environment Setup
 
-1. Install pnpm 9+: `npm install -g pnpm`
+1. Node.js 22.12.0+
 2. Install Rust and Solana CLI
 3. Install Anchor CLI
-4. Run `pnpm install`
+4. Run `npm install`
 
 ## Code Style
 
@@ -92,8 +92,11 @@ frontend --> sdk --> solana-contracts (IDL types)
 
 | File | Purpose |
 |------|---------|
-| `packages/sdk/src/client.ts` | Main SDK client |
-| `packages/sdk/src/types.ts` | TypeScript types |
+| `packages/sdk/src/index.ts` | SDK exports |
+| `packages/sdk/src/createProof.ts` | Main proof creation API |
+| `packages/sdk/src/parser.ts` | JS to Noir parser |
+| `packages/sdk/src/generator.ts` | Noir code generator |
+| `packages/sdk/src/prover.ts` | Proof generation/verification |
 | `packages/solana-contracts/programs/izi-noir/src/lib.rs` | Main Solana program |
 | `packages/frontend/src/App.tsx` | Frontend entry component |
 
