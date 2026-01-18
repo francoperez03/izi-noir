@@ -1,0 +1,6 @@
+{
+  "name": "@izi-noir/agent-skills",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude agent skills for izi-noir development"
+}
