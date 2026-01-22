@@ -6,11 +6,24 @@
   "main": "pkg/arkworks_groth16_wasm.js",
   "module": "pkg/arkworks_groth16_wasm.js",
   "types": "pkg/arkworks_groth16_wasm.d.ts",
+  "exports": {
+    ".": {
+      "types": "./pkg/arkworks_groth16_wasm.d.ts",
+      "import": "./pkg/arkworks_groth16_wasm.js",
+      "require": "./pkg/arkworks_groth16_wasm.js"
+    },
+    "./nodejs": {
+      "types": "./pkg-nodejs/arkworks_groth16_wasm.d.ts",
+      "import": "./pkg-nodejs/arkworks_groth16_wasm.js",
+      "require": "./pkg-nodejs/arkworks_groth16_wasm.js"
+    }
+  },
   "files": [
-    "pkg/"
+    "pkg/",
+    "pkg-nodejs/"
   ],
   "scripts": {
-    "build": "wasm-pack build --target web --out-dir pkg",
+    "build": "[ -f pkg/arkworks_groth16_wasm_bg.wasm ] && echo 'WASM already built, skipping...' || wasm-pack build --target web --out-dir pkg",
     "build:nodejs": "wasm-pack build --target nodejs --out-dir pkg-nodejs",
     "build:bundler": "wasm-pack build --target bundler --out-dir pkg-bundler",
     "test": "cargo test",

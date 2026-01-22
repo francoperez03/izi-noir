@@ -1,0 +1,20 @@
+{
+  "name": "arkworks-groth16-wasm",
+  "type": "module",
+  "collaborators": [
+    "IZI-NOIR Team"
+  ],
+  "description": "WASM bindings for Groth16 proving using arkworks, compatible with gnark-verifier-solana",
+  "version": "0.1.0",
+  "license": "MIT OR Apache-2.0",
+  "files": [
+    "arkworks_groth16_wasm_bg.wasm",
+    "arkworks_groth16_wasm.js",
+    "arkworks_groth16_wasm.d.ts"
+  ],
+  "main": "arkworks_groth16_wasm.js",
+  "types": "arkworks_groth16_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
