@@ -90,3 +90,83 @@ export { AcornParser } from './infra/parser/AcornParser.js';
 
 // Services
 export { generateNoir } from './application/services/NoirGenerator.js';
+
+// =============================================================================
+// Solana Utilities
+// =============================================================================
+
+export { SolanaTransactionBuilder } from './solana/TransactionBuilder.js';
+export type {
+  TransactionBuilderConfig,
+  InstructionData,
+  InitVkAccounts,
+  VerifyProofAccounts,
+  CloseVkAccounts,
+  InitAndVerifyInstructions,
+} from './solana/TransactionBuilder.js';
+
+// Solana proof data helpers (from providers/solana.ts)
+export {
+  IZI_NOIR_PROGRAM_ID,
+  parseVerifyingKey,
+  parseProof,
+  parsePublicInputs,
+  calculateVkAccountSize,
+  calculateVkAccountRent,
+  buildInitVkFromBytesData,
+  buildVerifyProofData,
+} from './providers/solana.js';
+export type { SolanaProofData } from './domain/types.js';
+
+// VK Deployment Manager
+export {
+  VkDeploymentManager,
+  createNodeVkDeploymentManager,
+  NETWORK_ENDPOINTS,
+} from './deployment/VkDeploymentManager.js';
+export type {
+  VkDeploymentManagerConfig,
+  VkDeployment,
+  EnsureDeployedOptions,
+  DeploymentResult,
+  DeploymentsState,
+  SolanaNetwork,
+  SignerInfo,
+} from './deployment/VkDeploymentManager.js';
+
+// =============================================================================
+// Circuit Registry
+// =============================================================================
+
+export {
+  CircuitRegistry,
+  getGlobalRegistry,
+  defineCircuit,
+} from './registry/CircuitRegistry.js';
+export type {
+  CircuitDefinition,
+  CircuitInputDef,
+  RegisteredCircuit,
+  GetCircuitOptions,
+  CircuitRegistryExport,
+  CircuitExportEntry,
+} from './registry/CircuitRegistry.js';
+
+// =============================================================================
+// Off-Chain Verifier
+// =============================================================================
+
+export {
+  OffchainVerifier,
+  createVerifierMiddleware,
+  createVerificationEndpoint,
+  batchVerify,
+} from './server/OffchainVerifier.js';
+export type {
+  OffchainVerifierConfig,
+  OffchainCircuitConfig,
+  VerifyRequest,
+  VerifyResult,
+  VerificationEndpointOptions,
+  BatchVerifyResult,
+} from './server/OffchainVerifier.js';

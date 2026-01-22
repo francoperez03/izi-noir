@@ -16,7 +16,7 @@
  * const verifier = new SolanaVerifier({
  *   connection,
  *   wallet,
- *   programId: 'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS',
+ *   programId: 'EYhRED7EuMyyVjx57aDXUD9h6ArnEKng64qtz8999KrS',
  * });
  *
  * // Initialize a VK account from base64-encoded VK
@@ -40,8 +40,8 @@ export const FIELD_SIZE = 32;
 export const PROOF_SIZE = 256;
 export const MAX_PUBLIC_INPUTS = 16;
 
-// Program ID (placeholder - should match deployed program)
-export const IZI_NOIR_PROGRAM_ID = 'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS';
+// Program ID - deployed on devnet
+export const IZI_NOIR_PROGRAM_ID = 'EYhRED7EuMyyVjx57aDXUD9h6ArnEKng64qtz8999KrS';
 
 /**
  * Configuration for the SolanaVerifier.
