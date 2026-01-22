@@ -9,7 +9,13 @@ export default defineConfig({
     "src/providers/solana.ts",
   ],
   format: ["esm", "cjs"],
-  dts: true,
+  // Use resolve strategy for DTS to avoid worker issues in CI
+  dts: {
+    resolve: true,
+    compilerOptions: {
+      skipLibCheck: true,
+    },
+  },
   splitting: false,
   sourcemap: true,
   clean: true,
