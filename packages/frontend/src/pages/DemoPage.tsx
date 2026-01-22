@@ -676,8 +676,8 @@ export function DemoPage() {
           </div>
 
           <div className="flex gap-8 text-sm text-gray-500">
-            <Link to="/landing" className="hover:text-solana-purple transition-colors">
-              Landing Page
+            <Link to="/" className="hover:text-solana-purple transition-colors">
+              Home
             </Link>
             <a
               href="https://github.com/izi-noir/izi-noir"

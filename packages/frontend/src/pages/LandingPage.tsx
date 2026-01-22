@@ -77,7 +77,7 @@ export function LandingPage() {
           </p>
 
           <div className="hero-cta opacity-0">
-            <Link to="/" className="btn-primary inline-flex items-center gap-3 text-lg">
+            <Link to="/demo" className="btn-primary inline-flex items-center gap-3 text-lg">
               Try the Demo
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6"/>
@@ -443,7 +443,7 @@ template RangeProof(n) {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/" className="proof-cta btn-primary opacity-0">
+            <Link to="/demo" className="proof-cta btn-primary opacity-0">
               Try the Demo
             </Link>
             <a
