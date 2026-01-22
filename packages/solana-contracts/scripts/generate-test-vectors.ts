@@ -1,116 +1,92 @@
+#!/usr/bin/env npx tsx
 /**
- * Script to generate test vectors for Solana program tests.
+ * Generate test vectors for Solana integration tests.
  *
- * Uses the IZI-NOIR SDK to:
- * 1. Compile a simple circuit (secret * secret == expected)
- * 2. Generate Groth16 proving/verifying keys
- * 3. Generate a proof
- * 4. Output VK and proof in gnark format (base64)
+ * This script uses the IZI-NOIR SDK to compile a circuit and generate
+ * a proof, then saves the test vectors to a JSON file.
  *
- * Run: npx ts-node scripts/generate-test-vectors.ts
+ * Usage:
+ *   npm run generate-vectors
+ *   # or
+ *   npx tsx scripts/generate-test-vectors.ts
+ *
+ * Output:
+ *   tests/test-vectors.json
  */
 
-// @ts-ignore - Direct import path needed for tsx
-import { ArkworksWasm, isArkworksCircuit } from '../../sdk/dist/providers/arkworks.js';
+import { writeFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-// Simple Noir circuit: proves knowledge of a secret whose square equals expected
-const NOIR_CODE = `
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Noir circuit for testing: assert(secret * secret == expected)
+const TEST_CIRCUIT = `
 fn main(expected: pub Field, secret: Field) {
     assert(secret * secret == expected);
 }
 `;
 
+// Test inputs: secret=10, expected=100
+const TEST_INPUTS = {
+  expected: "100",
+  secret: "10",
+};
+
 async function main() {
-  console.log('Generating test vectors for Solana verifier...\n');
+  console.log("🔄 Generating test vectors using IZI-NOIR SDK...\n");
 
-  // Initialize the proving system
-  const prover = new ArkworksWasm({ cacheKeys: true });
+  // Dynamic import of SDK
+  const { IziNoir, Provider } = await import("@izi-noir/sdk");
 
-  // Compile the circuit
-  console.log('1. Compiling circuit...');
-  const circuit = await prover.compile(NOIR_CODE);
-  console.log('   Circuit compiled successfully');
+  // Initialize with Arkworks provider
+  console.log("   Initializing Arkworks provider...");
+  const izi = await IziNoir.init({ provider: Provider.Arkworks });
 
-  if (!isArkworksCircuit(circuit)) {
-    throw new Error('Expected ArkworksCompiledCircuit');
+  // Compile the test circuit
+  console.log("   Compiling circuit...");
+  await izi.compile(TEST_CIRCUIT);
+
+  // Generate proof with Solana data
+  console.log("   Generating proof...");
+  const solanaProof = await izi.proveForSolana(TEST_INPUTS);
+
+  // Verify locally first
+  console.log("   Verifying locally...");
+  const localVerified = await izi.verify(solanaProof.proof.bytes, solanaProof.publicInputs.hex);
+  console.log(`   Local verification: ${localVerified ? "✅ PASSED" : "❌ FAILED"}`);
+
+  if (!localVerified) {
+    throw new Error("Local verification failed - proof is invalid");
   }
 
-  // Get the verifying key in gnark format
-  console.log('2. Getting verifying key in gnark format...');
-  const vkGnark = await prover.getVerifyingKeyGnark(circuit);
-  const vkGnarkBase64 = uint8ArrayToBase64(vkGnark);
-  console.log(`   VK size: ${vkGnark.length} bytes`);
-
-  // Generate a proof for: secret=10, expected=100 (10*10=100)
-  console.log('3. Generating proof...');
-  const inputs = {
-    expected: '100',
-    secret: '10',
-  };
-  const proofData = await prover.generateProof(circuit, inputs);
-  const proofGnarkBase64 = uint8ArrayToBase64(proofData.proof);
-  console.log(`   Proof size: ${proofData.proof.length} bytes`);
-  console.log(`   Public inputs: ${JSON.stringify(proofData.publicInputs)}`);
-
-  // Verify the proof locally
-  console.log('4. Verifying proof locally...');
-  const verified = await prover.verifyProof(circuit, proofData.proof, proofData.publicInputs);
-  console.log(`   Verification result: ${verified}`);
-
-  if (!verified) {
-    throw new Error('Proof verification failed locally!');
-  }
-
-  // Output test vectors
-  console.log('\n=== TEST VECTORS ===\n');
-  console.log('// Number of public inputs');
-  console.log(`const NR_PUBINPUTS = 1;\n`);
-
-  console.log('// Verifying key in gnark format (base64)');
-  console.log(`const TEST_VK_BASE64 = "${vkGnarkBase64}";\n`);
-
-  console.log('// Proof in gnark format (base64)');
-  console.log(`const TEST_PROOF_BASE64 = "${proofGnarkBase64}";\n`);
-
-  console.log('// Public input: expected = 100');
-  console.log('// Hex representation (32 bytes, big-endian)');
-  const publicInputHex = publicInputToHex(proofData.publicInputs[0]);
-  console.log(`const TEST_PUBLIC_INPUT = "${publicInputHex}";\n`);
-
-  // Also output as JSON for easier integration
-  console.log('\n=== JSON FORMAT ===\n');
+  // Convert Uint8Array to base64 for JSON serialization
   const testVectors = {
-    nrPubinputs: 1,
-    vkGnarkBase64: vkGnarkBase64,
-    proofGnarkBase64: proofGnarkBase64,
-    publicInputs: proofData.publicInputs,
-    publicInputHex: publicInputHex,
-    inputs: {
-      expected: 100,
-      secret: 10,
-    },
+    generatedAt: new Date().toISOString(),
+    circuit: TEST_CIRCUIT.trim(),
+    inputs: TEST_INPUTS,
+    nrPubinputs: solanaProof.verifyingKey.nrPublicInputs,
+    vkBase64: solanaProof.verifyingKey.base64,
+    proofBase64: solanaProof.proof.base64,
+    publicInputsHex: solanaProof.publicInputs.hex,
+    accountSize: solanaProof.accountSize,
+    estimatedRent: solanaProof.estimatedRent,
   };
-  console.log(JSON.stringify(testVectors, null, 2));
 
-  console.log('\n\nDone!');
+  // Write to file
+  const outputPath = join(__dirname, "..", "tests", "test-vectors.json");
+  writeFileSync(outputPath, JSON.stringify(testVectors, null, 2));
+
+  console.log(`\n✅ Test vectors generated successfully!`);
+  console.log(`   - VK size: ${solanaProof.verifyingKey.bytes.length} bytes`);
+  console.log(`   - Proof size: ${solanaProof.proof.bytes.length} bytes`);
+  console.log(`   - Public inputs: ${testVectors.nrPubinputs}`);
+  console.log(`   - Account size: ${testVectors.accountSize} bytes`);
+  console.log(`   - Estimated rent: ${(testVectors.estimatedRent / 1e9).toFixed(6)} SOL`);
+  console.log(`\n   Output: ${outputPath}`);
 }
 
-function uint8ArrayToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function publicInputToHex(input: string): string {
-  // Input is a hex string or decimal string
-  const hex = input.startsWith('0x') ? input.slice(2) : BigInt(input).toString(16);
-  // Pad to 64 hex chars (32 bytes)
-  return '0x' + hex.padStart(64, '0');
-}
-
-main().catch((error) => {
-  console.error('Error:', error);
+main().catch((err) => {
+  console.error("\n❌ Failed to generate test vectors:", err);
   process.exit(1);
 });

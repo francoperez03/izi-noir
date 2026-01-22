@@ -9,14 +9,14 @@ skip-lint = false
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [programs.localnet]
-izi_noir = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+izi_noir = "EYhRED7EuMyyVjx57aDXUD9h6ArnEKng64qtz8999KrS"
 
 [programs.devnet]
-izi_noir = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+izi_noir = "EYhRED7EuMyyVjx57aDXUD9h6ArnEKng64qtz8999KrS"
 
 [scripts]
 test = "pnpm run test:local"

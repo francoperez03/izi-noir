@@ -39,7 +39,7 @@ use state::{
 };
 use verifier::verify_groth16;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("EYhRED7EuMyyVjx57aDXUD9h6ArnEKng64qtz8999KrS");
 
 #[program]
 pub mod izi_noir {

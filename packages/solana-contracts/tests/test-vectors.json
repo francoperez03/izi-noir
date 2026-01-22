@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-01-19T01:18:44.417Z",
+  "circuit": "fn main(expected: pub Field, secret: Field) {\n    assert(secret * secret == expected);\n}",
+  "inputs": {
+    "expected": "100",
+    "secret": "10"
+  },
+  "nrPubinputs": 1,
+  "vkBase64": "JcB02Hw71Y0OBThFnxQVwj9pXxuV8qnMeCtc+8ntcjYkreyIyMg4mm1fru2YvgPln5cs5RJzFDQ2Nijg2i08Vw/o2N+miTHZyb80LIbcl5E82gHA4Y0SeZ4FrdBXybiEFjFxXtlN4mIsXw52TsA3BZpXBJ19SutHT368PkTFg2EAmp788/HTnYOWInAH96MRRHrCvQW/bPjY6FYZij3vFCJxuQ4kInxu1/RfmEDWMJfzDeKgMDxWLIdm+4Sr6GErEq6/ppG9oG3Pta2Pgm7pO6KTfdHD1eu5zWlp1uyfs44GvhwMa1BnTck2RmwJmejvSHOkcOnXfOewvhUiMfikMCpO3iIAYoD47bRw0DfekZFC3wR+fOeUPF8HdoxaZAvqLtKQyaxbBr8TERXP5g6HxnGrzOeVMg6bFcy3Dzo9V1UPOp2lHXXURQ8ktQPQgHLPgPGpi8QbUmCA9o/CptjwwiT8wCUJsI16aMOHTdiklkpzTbgEfgijAgXOPZAlBxwTIqUWmVohKEHwrCFiQHEOdYN3OxsLpt3KQd9wMxOaqQEiQuoJjkE+2wsXp6W821Tw2vu/GtH0NqlnkZNf3PO0gSeCDzyuG4IHqDegko4u82FH3TeBr3J70vkFalTJtN9mGL3qZT8Mpdn8tJu5dWVRDr1irTqqofkHdNUPAvzwBLopwQIGEno0IlDeJqQRDZ0VYFJHWmlC6JH6VrIsu/4R6iFDVCMHoU/cTRXThtD1jySWiV1uKVQ6Tci1RfGo6aOk",
+  "proofBase64": "GdzvdiO/NKzyyRmk9idN5E3BR0HU4pqQQXpRMpTK2QAgkCGJcj6s58zcw8+MIfvlGAE8sm0kH9KzrL+5VqdwvCe6FsXjO1oI+RuXQ3Pmni+jGlYE3+tyN0/S/xMfe3l0FqFOPh4gbahl8F+zSZF+gM2IvPpkQmdAHzstywZEzBQVcIf8tOuSeNsvgJJ0AbEXX9x8ybXhk6y05JkVmT/b6RCdhu818Qh0QhV3TEGYvt+zD0pe3zUPCyShe6LB0o/XC74xr9jjlHyFAUd/KICF9dcwwIIbrNtlOBO65CwC5n4iClGPgbHVYJK1u1jZBCwLlKbgTWhU5rtlrZSvylTokQ==",
+  "publicInputsHex": [
+    "0x0000000000000000000000000000000000000000000000000000000000000139"
+  ],
+  "accountSize": 621,
+  "estimatedRent": 4322160
+}
