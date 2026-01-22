@@ -1,3 +1,346 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --solana-purple: #9945FF;
+    --solana-green: #14F195;
+    --noir-primary: #050505;
+    --noir-elevated: #0A0A0A;
+    --noir-orange: #FF6B35;
+    --scroll-y: 30%;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-white antialiased;
+    background-color: var(--noir-primary);
+    background-image:
+      /* Subtle noise texture for depth */
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.015'/%3E%3C/svg%3E"),
+      /* Scroll-linked purple spotlight */
+      radial-gradient(
+        ellipse 60% 40% at 50% var(--scroll-y),
+        rgba(153, 69, 255, 0.06) 0%,
+        transparent 50%
+      ),
+      /* Static ambient green glow at bottom */
+      radial-gradient(
+        ellipse 80% 50% at 50% 110%,
+        rgba(20, 241, 149, 0.04) 0%,
+        transparent 40%
+      );
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-solana-purple/30 text-white;
+  }
+}
+
+@layer components {
+  /* Brand gradient - minimal use */
+  .brand-gradient {
+    background: linear-gradient(135deg, var(--solana-purple) 0%, var(--noir-orange) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Code panels */
+  .code-panel {
+    @apply p-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm;
+    transition: border-color 0.3s ease, opacity 0.3s ease;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply px-8 py-4 rounded-xl font-semibold;
+    @apply shadow-lg shadow-solana-purple/20;
+    background: linear-gradient(
+      90deg,
+      var(--solana-purple) 0%,
+      var(--solana-purple) 50%,
+      var(--solana-green) 100%
+    );
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+  }
+
+  .btn-secondary {
+    @apply px-8 py-4 rounded-xl font-semibold;
+    @apply border border-white/20 hover:border-white/40;
+    @apply hover:bg-white/5 transition-all duration-300;
+  }
+
+  /* Character animation helper */
+  .char {
+    display: inline-block;
+    will-change: transform, opacity, filter;
+  }
+
+  /* Workflow step cards */
+  .workflow-step {
+    @apply p-6 rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm text-left;
+    transition: border-color 0.3s ease, transform 0.3s ease;
+  }
+
+  .workflow-step:hover {
+    transform: translateY(-2px);
+  }
+
+  .workflow-step.step-write:hover {
+    border-color: var(--solana-purple);
+  }
+
+  .workflow-step.step-prove:hover {
+    border-color: var(--noir-orange);
+  }
+
+  .workflow-step.step-deploy:hover {
+    border-color: var(--solana-green);
+  }
+
+  .workflow-step.step-verify:hover {
+    border-color: var(--solana-purple);
+  }
+
+  /* Feature cards */
+  .feature-card {
+    @apply p-6 rounded-xl border border-white/5 text-left;
+    background: rgba(255, 255, 255, 0.02);
+    transition: border-color 0.3s ease, transform 0.3s ease, background 0.3s ease;
+  }
+
+  .feature-card:hover {
+    @apply border-solana-purple/50;
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  /* Workflow arrow connector */
+  .workflow-arrow {
+    @apply text-white/20;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--noir-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/20;
+}
+
+/* ================================
+   DEMO PAGE STYLES
+   ================================ */
+
+@layer components {
+  /* Demo sections */
+  .demo-section {
+    @apply min-h-screen flex items-center justify-center px-4 py-16;
+  }
+
+  /* Editor panel - code editor look */
+  .editor-panel {
+    @apply rounded-xl border border-white/10 bg-black/60 backdrop-blur-md overflow-hidden;
+    transition: border-color 0.3s ease, opacity 0.3s ease;
+  }
+
+  .editor-panel:hover {
+    @apply border-white/20;
+  }
+
+  .editor-header {
+    @apply px-4 py-3 border-b border-white/10 flex items-center gap-2;
+  }
+
+  .editor-dot {
+    @apply w-3 h-3 rounded-full;
+  }
+
+  .editor-dot.red { @apply bg-red-500/80; }
+  .editor-dot.yellow { @apply bg-yellow-500/80; }
+  .editor-dot.green { @apply bg-green-500/80; }
+
+  .editor-title {
+    @apply text-xs text-gray-500 uppercase tracking-wider ml-2;
+  }
+
+  .editor-content {
+    @apply p-4 font-mono text-sm;
+  }
+
+  /* Code textarea */
+  .code-textarea {
+    @apply w-full bg-transparent text-gray-300 font-mono text-sm resize-none;
+    @apply focus:outline-none;
+    line-height: 1.6;
+  }
+
+  /* Input fields */
+  .demo-input-field {
+    @apply bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white font-mono;
+    @apply focus:border-solana-purple focus:outline-none transition-colors;
+  }
+
+  .demo-input-label {
+    @apply text-xs text-gray-500 uppercase tracking-wider mb-2 block;
+  }
+
+  /* Result cards */
+  .result-card {
+    @apply p-5 rounded-xl border border-white/10 bg-black/30 text-center;
+    transition: border-color 0.3s ease, transform 0.3s ease;
+  }
+
+  .result-card:hover {
+    @apply border-white/20;
+    transform: translateY(-2px);
+  }
+
+  .result-value {
+    @apply text-3xl font-bold font-mono;
+  }
+
+  .result-label {
+    @apply text-xs text-gray-500 uppercase tracking-wider mt-2;
+  }
+
+  /* Progress bar */
+  .proof-progress {
+    @apply h-2 bg-white/10 rounded-full overflow-hidden;
+  }
+
+  .proof-progress-fill {
+    @apply h-full rounded-full;
+    background: linear-gradient(90deg, var(--solana-purple), var(--solana-green));
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+
+  /* Demo buttons */
+  .demo-btn {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300;
+    @apply disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .demo-btn-primary {
+    @apply demo-btn text-white;
+    @apply shadow-lg shadow-solana-purple/20;
+    background: linear-gradient(90deg, var(--solana-purple) 0%, var(--solana-purple) 50%, var(--solana-green) 100%);
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+  }
+
+  .demo-btn-primary:not(:disabled):hover {
+    background-position: 100% 0%;
+    @apply shadow-solana-green/20;
+  }
+
+  .demo-btn-secondary {
+    @apply demo-btn border border-white/20 text-white;
+    @apply hover:border-white/40 hover:bg-white/5;
+  }
+
+  /* Wallet badge */
+  .wallet-badge {
+    @apply px-4 py-2 rounded-lg text-sm font-mono inline-flex items-center gap-2;
+    @apply bg-solana-green/10 border border-solana-green/30 text-solana-green;
+  }
+
+  .wallet-badge-disconnected {
+    @apply bg-white/5 border-white/20 text-gray-400;
+  }
+
+  /* Progress steps */
+  .progress-step {
+    @apply flex items-center gap-3 text-gray-500 text-sm;
+    transition: color 0.3s ease;
+  }
+
+  .progress-step.active {
+    @apply text-solana-purple;
+  }
+
+  .progress-step.completed {
+    @apply text-solana-green;
+  }
+
+  .progress-step-dot {
+    @apply w-3 h-3 rounded-full border-2 border-current;
+    transition: background-color 0.3s ease;
+  }
+
+  .progress-step.completed .progress-step-dot {
+    @apply bg-solana-green;
+  }
+
+  .progress-step.active .progress-step-dot {
+    @apply bg-solana-purple;
+  }
+
+  /* Success checkmark */
+  .success-checkmark {
+    @apply w-16 h-16 mx-auto;
+  }
+
+  .success-checkmark circle {
+    stroke: var(--solana-green);
+    stroke-width: 2;
+    fill: none;
+    opacity: 0.3;
+  }
+
+  .success-checkmark path {
+    stroke: var(--solana-green);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+  }
+
+  /* Transaction link */
+  .tx-link {
+    @apply text-solana-purple hover:text-solana-green transition-colors;
+    @apply underline underline-offset-2;
+  }
+
+  /* Demo panel */
+  .demo-panel {
+    @apply p-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm;
+    transition: border-color 0.3s ease, opacity 0.3s ease;
+  }
+
+  /* Verified badge */
+  .verified-badge {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl;
+    @apply bg-solana-green/10 border border-solana-green/30 text-solana-green;
+    @apply font-semibold text-lg;
+  }
+}
+
+/* Accessibility - reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
