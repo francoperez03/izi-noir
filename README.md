@@ -194,7 +194,7 @@ await program.methods
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/izi-noir.git
+git clone https://github.com/francoperez03/izi-noir.git
 cd izi-noir
 
 # Install dependencies

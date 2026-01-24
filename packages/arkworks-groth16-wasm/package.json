@@ -32,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/izi-noir/izi-noir.git",
+    "url": "https://github.com/francoperez03/izi-noir.git",
     "directory": "packages/arkworks-groth16-wasm"
   },
   "keywords": [
@@ -46,6 +46,9 @@
   ],
   "author": "IZI-NOIR Team",
   "license": "MIT OR Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {},
   "peerDependencies": {}
 }
