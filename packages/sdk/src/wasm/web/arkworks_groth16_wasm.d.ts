@@ -22,6 +22,19 @@ export function init_panic_hook(): void;
 export function prove(proving_key_b64: string, acir_json: string, witness_json: string): any;
 
 /**
+ * Generate a Groth16 proof from R1CS definition
+ *
+ * # Arguments
+ * * `proving_key_b64` - Base64-encoded proving key from setup
+ * * `r1cs_json` - JSON string of R1CS definition
+ * * `witness_json` - JSON object mapping witness indices to hex values
+ *
+ * # Returns
+ * * `JsProofResult` with proof and public inputs
+ */
+export function prove_from_r1cs(proving_key_b64: string, r1cs_json: string, witness_json: string): any;
+
+/**
  * Perform trusted setup for a circuit
  *
  * # Arguments
@@ -31,6 +44,17 @@ export function prove(proving_key_b64: string, acir_json: string, witness_json: 
  * * `JsSetupResult` with base64-encoded proving and verifying keys
  */
 export function setup(acir_json: string): any;
+
+/**
+ * Perform trusted setup from R1CS definition
+ *
+ * # Arguments
+ * * `r1cs_json` - JSON string of R1CS definition
+ *
+ * # Returns
+ * * `JsSetupResult` with base64-encoded proving and verifying keys
+ */
+export function setup_from_r1cs(r1cs_json: string): any;
 
 /**
  * Verify a Groth16 proof
@@ -70,7 +94,9 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly acir_to_r1cs_info: (a: number, b: number) => [number, number, number];
     readonly prove: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+    readonly prove_from_r1cs: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly setup: (a: number, b: number) => [number, number, number];
+    readonly setup_from_r1cs: (a: number, b: number) => [number, number, number];
     readonly verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly verify_gnark: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
     readonly version: () => [number, number];

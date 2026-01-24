@@ -3,7 +3,9 @@
 export const memory: WebAssembly.Memory;
 export const acir_to_r1cs_info: (a: number, b: number) => [number, number, number];
 export const prove: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+export const prove_from_r1cs: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
 export const setup: (a: number, b: number) => [number, number, number];
+export const setup_from_r1cs: (a: number, b: number) => [number, number, number];
 export const verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
 export const verify_gnark: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
 export const version: () => [number, number];

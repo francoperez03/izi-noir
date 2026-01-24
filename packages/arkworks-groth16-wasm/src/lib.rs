@@ -321,6 +321,186 @@ pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+// =============================================================================
+// Direct R1CS API (bypasses ACIR bytecode decoding)
+// =============================================================================
+
+/// R1CS constraint in JSON format
+#[derive(Serialize, Deserialize)]
+pub struct JsR1csConstraint {
+    /// A terms: [(coefficient_hex, witness_index), ...]
+    pub a: Vec<(String, u32)>,
+    /// B terms: [(coefficient_hex, witness_index), ...]
+    pub b: Vec<(String, u32)>,
+    /// C terms: [(coefficient_hex, witness_index), ...]
+    pub c: Vec<(String, u32)>,
+}
+
+/// R1CS definition in JSON format
+#[derive(Serialize, Deserialize)]
+pub struct JsR1csDefinition {
+    /// Total number of witnesses (including w_0 = 1)
+    pub num_witnesses: usize,
+    /// Public input witness indices
+    pub public_inputs: Vec<u32>,
+    /// Private input witness indices
+    pub private_inputs: Vec<u32>,
+    /// Constraints
+    pub constraints: Vec<JsR1csConstraint>,
+}
+
+/// Perform trusted setup from R1CS definition
+///
+/// # Arguments
+/// * `r1cs_json` - JSON string of R1CS definition
+///
+/// # Returns
+/// * `JsSetupResult` with base64-encoded proving and verifying keys
+#[wasm_bindgen]
+pub fn setup_from_r1cs(r1cs_json: &str) -> Result<JsValue, JsValue> {
+    let js_r1cs: JsR1csDefinition = serde_json::from_str(r1cs_json)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse R1CS JSON: {}", e)))?;
+
+    // Convert to internal R1CS format
+    let r1cs = convert_js_r1cs(&js_r1cs)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let setup_result = groth16::setup(&r1cs)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Serialize keys
+    let pk_bytes = setup_result.proving_key
+        .serialize_compressed_to_vec()
+        .map_err(|e| JsValue::from_str(&format!("Failed to serialize proving key: {}", e)))?;
+
+    let vk_bytes = setup_result.verifying_key
+        .serialize_compressed_to_vec()
+        .map_err(|e| JsValue::from_str(&format!("Failed to serialize verifying key: {}", e)))?;
+
+    let vk_gnark = gnark_compat::verifying_key_to_gnark(&setup_result.verifying_key)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    use base64::{Engine, engine::general_purpose::STANDARD};
+
+    let result = JsSetupResult {
+        proving_key: STANDARD.encode(&pk_bytes),
+        verifying_key: STANDARD.encode(&vk_bytes),
+        verifying_key_gnark: STANDARD.encode(&vk_gnark),
+    };
+
+    serde_wasm_bindgen::to_value(&result)
+        .map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+/// Generate a Groth16 proof from R1CS definition
+///
+/// # Arguments
+/// * `proving_key_b64` - Base64-encoded proving key from setup
+/// * `r1cs_json` - JSON string of R1CS definition
+/// * `witness_json` - JSON object mapping witness indices to hex values
+///
+/// # Returns
+/// * `JsProofResult` with proof and public inputs
+#[wasm_bindgen]
+pub fn prove_from_r1cs(
+    proving_key_b64: &str,
+    r1cs_json: &str,
+    witness_json: &str,
+) -> Result<JsValue, JsValue> {
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use ark_serialize::CanonicalDeserialize;
+
+    // Decode proving key
+    let pk_bytes = STANDARD.decode(proving_key_b64)
+        .map_err(|e| JsValue::from_str(&format!("Invalid proving key base64: {}", e)))?;
+
+    let proving_key = ark_groth16::ProvingKey::<ark_bn254::Bn254>::deserialize_compressed(&pk_bytes[..])
+        .map_err(|e| JsValue::from_str(&format!("Failed to deserialize proving key: {}", e)))?;
+
+    // Parse R1CS
+    let js_r1cs: JsR1csDefinition = serde_json::from_str(r1cs_json)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse R1CS JSON: {}", e)))?;
+
+    let r1cs = convert_js_r1cs(&js_r1cs)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Parse witness
+    let witness_map: HashMap<String, String> = serde_json::from_str(witness_json)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse witness: {}", e)))?;
+
+    let mut witness = WitnessMap::new();
+    // Always set w_0 = 1
+    witness.insert(0, ark_bn254::Fr::from(1u64));
+
+    for (key, value) in witness_map {
+        let idx: u32 = key.parse()
+            .map_err(|_| JsValue::from_str(&format!("Invalid witness index: {}", key)))?;
+        let fr = parse_field_element(&value)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        witness.insert(idx, fr);
+    }
+
+    // Generate proof
+    let proof_result = groth16::prove(&proving_key, &r1cs, witness)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Serialize results
+    let proof_bytes = groth16::proof_to_bytes(&proof_result.proof)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let proof_gnark = groth16::proof_to_gnark_bytes(&proof_result.proof)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let public_inputs: Vec<String> = proof_result.public_inputs
+        .iter()
+        .map(|fr| {
+            let bytes = gnark_compat::fr_to_be_bytes(fr);
+            format!("0x{}", hex::encode(bytes))
+        })
+        .collect();
+
+    let public_inputs_gnark_bytes = groth16::public_inputs_to_gnark_bytes(&proof_result.public_inputs);
+
+    let result = JsProofResult {
+        proof: STANDARD.encode(&proof_bytes),
+        proof_gnark: STANDARD.encode(&proof_gnark),
+        public_inputs,
+        public_inputs_gnark: STANDARD.encode(&public_inputs_gnark_bytes),
+    };
+
+    serde_wasm_bindgen::to_value(&result)
+        .map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+/// Convert JS R1CS definition to internal format
+fn convert_js_r1cs(js_r1cs: &JsR1csDefinition) -> Result<acir_to_r1cs::AcirR1cs, error::ArkworksError> {
+    let mut constraints = Vec::new();
+
+    for c in &js_r1cs.constraints {
+        let a: Vec<(ark_bn254::Fr, u32)> = c.a.iter()
+            .map(|(coeff, idx)| Ok((parse_field_element(coeff)?, *idx)))
+            .collect::<Result<Vec<_>, error::ArkworksError>>()?;
+
+        let b: Vec<(ark_bn254::Fr, u32)> = c.b.iter()
+            .map(|(coeff, idx)| Ok((parse_field_element(coeff)?, *idx)))
+            .collect::<Result<Vec<_>, error::ArkworksError>>()?;
+
+        let c_terms: Vec<(ark_bn254::Fr, u32)> = c.c.iter()
+            .map(|(coeff, idx)| Ok((parse_field_element(coeff)?, *idx)))
+            .collect::<Result<Vec<_>, error::ArkworksError>>()?;
+
+        constraints.push(acir_to_r1cs::R1csConstraint { a, b, c: c_terms });
+    }
+
+    Ok(acir_to_r1cs::AcirR1cs {
+        num_witnesses: js_r1cs.num_witnesses,
+        public_inputs: js_r1cs.public_inputs.clone(),
+        private_inputs: js_r1cs.private_inputs.clone(),
+        return_values: js_r1cs.public_inputs.clone(), // Return values = public outputs
+        constraints,
+    })
+}
+
 // Helper trait for serialization
 trait SerializeCompressedToVec {
     fn serialize_compressed_to_vec(&self) -> Result<Vec<u8>, ark_serialize::SerializationError>;

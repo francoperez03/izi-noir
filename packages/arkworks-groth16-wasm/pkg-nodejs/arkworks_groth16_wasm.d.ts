@@ -22,6 +22,19 @@ export function init_panic_hook(): void;
 export function prove(proving_key_b64: string, acir_json: string, witness_json: string): any;
 
 /**
+ * Generate a Groth16 proof from R1CS definition
+ *
+ * # Arguments
+ * * `proving_key_b64` - Base64-encoded proving key from setup
+ * * `r1cs_json` - JSON string of R1CS definition
+ * * `witness_json` - JSON object mapping witness indices to hex values
+ *
+ * # Returns
+ * * `JsProofResult` with proof and public inputs
+ */
+export function prove_from_r1cs(proving_key_b64: string, r1cs_json: string, witness_json: string): any;
+
+/**
  * Perform trusted setup for a circuit
  *
  * # Arguments
@@ -31,6 +44,17 @@ export function prove(proving_key_b64: string, acir_json: string, witness_json: 
  * * `JsSetupResult` with base64-encoded proving and verifying keys
  */
 export function setup(acir_json: string): any;
+
+/**
+ * Perform trusted setup from R1CS definition
+ *
+ * # Arguments
+ * * `r1cs_json` - JSON string of R1CS definition
+ *
+ * # Returns
+ * * `JsSetupResult` with base64-encoded proving and verifying keys
+ */
+export function setup_from_r1cs(r1cs_json: string): any;
 
 /**
  * Verify a Groth16 proof

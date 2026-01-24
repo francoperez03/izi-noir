@@ -235,9 +235,8 @@ export class SolanaTransactionBuilder {
    */
   buildCloseVkInstruction(accounts: CloseVkAccounts): InstructionData {
     // Anchor discriminator for "close_vk"
-    const discriminator = new Uint8Array([
-      0x9a, 0x47, 0x02, 0x2b, 0x87, 0x97, 0x84, 0x4a
-    ]);
+    // From IDL: [82, 29, 77, 141, 76, 53, 205, 244]
+    const discriminator = new Uint8Array([82, 29, 77, 141, 76, 53, 205, 244]);
 
     return {
       data: discriminator,

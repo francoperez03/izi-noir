@@ -284,10 +284,8 @@ export function bytesToHex(bytes: Uint8Array): string {
  */
 export function buildInitVkFromBytesData(nrPubinputs: number, vkBytes: Uint8Array): Uint8Array {
   // Anchor instruction discriminator for "init_vk_from_bytes"
-  // This is sha256("global:init_vk_from_bytes")[0..8]
-  const discriminator = new Uint8Array([
-    0xa6, 0x3a, 0x52, 0xf7, 0x13, 0x81, 0x8a, 0x3b
-  ]);
+  // From IDL: [103, 78, 249, 70, 245, 176, 87, 56]
+  const discriminator = new Uint8Array([103, 78, 249, 70, 245, 176, 87, 56]);
 
   // Build instruction data: discriminator + nr_pubinputs (u8) + vk_bytes (Vec<u8>)
   const vkLen = new Uint8Array(4);
@@ -322,10 +320,8 @@ export function buildVerifyProofData(
   publicInputs: Uint8Array[]
 ): Uint8Array {
   // Anchor instruction discriminator for "verify_proof"
-  // This is sha256("global:verify_proof")[0..8]
-  const discriminator = new Uint8Array([
-    0x1e, 0x08, 0xf2, 0x36, 0x44, 0x9a, 0x4b, 0x5c
-  ]);
+  // From IDL: [217, 211, 191, 110, 144, 13, 186, 98]
+  const discriminator = new Uint8Array([217, 211, 191, 110, 144, 13, 186, 98]);
 
   // Validate proof size
   if (proofBytes.length !== PROOF_SIZE) {

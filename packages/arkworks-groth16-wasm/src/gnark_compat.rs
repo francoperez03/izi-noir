@@ -68,7 +68,8 @@ pub fn g1_from_gnark(bytes: &[u8; G1_SIZE]) -> Result<G1Affine, ArkworksError> {
 /// Convert a G2 affine point to gnark format (128 bytes, big-endian, uncompressed)
 ///
 /// G2 points on BN254 have coordinates in Fq2 (quadratic extension)
-/// gnark format: x.c0, x.c1, y.c0, y.c1 (each 32 bytes, big-endian)
+/// EIP-196/197 format (Ethereum/Solana): x.c1, x.c0, y.c1, y.c0 (imaginary first!)
+/// This matches gnark-verifier-solana expectations.
 pub fn g2_to_gnark(point: &G2Affine) -> [u8; G2_SIZE] {
     let mut bytes = [0u8; G2_SIZE];
 
@@ -80,31 +81,34 @@ pub fn g2_to_gnark(point: &G2Affine) -> [u8; G2_SIZE] {
     let x = point.x().unwrap();
     let y = point.y().unwrap();
 
-    // Fq2 = c0 + c1 * u
-    // gnark uses: x.A0, x.A1, y.A0, y.A1 (where A0 = c0, A1 = c1)
+    // Fq2 = c0 + c1 * u (where u² = -1)
+    // EIP-196 format: imaginary (c1) first, then real (c0)
+    // Layout: [x.c1 | x.c0 | y.c1 | y.c0]
     let x_c0_bytes = fq_to_be_bytes(&x.c0);
     let x_c1_bytes = fq_to_be_bytes(&x.c1);
     let y_c0_bytes = fq_to_be_bytes(&y.c0);
     let y_c1_bytes = fq_to_be_bytes(&y.c1);
 
-    bytes[..32].copy_from_slice(&x_c0_bytes);
-    bytes[32..64].copy_from_slice(&x_c1_bytes);
-    bytes[64..96].copy_from_slice(&y_c0_bytes);
-    bytes[96..].copy_from_slice(&y_c1_bytes);
+    bytes[..32].copy_from_slice(&x_c1_bytes);      // x imaginary first
+    bytes[32..64].copy_from_slice(&x_c0_bytes);    // x real second
+    bytes[64..96].copy_from_slice(&y_c1_bytes);    // y imaginary first
+    bytes[96..].copy_from_slice(&y_c0_bytes);      // y real second
 
     bytes
 }
 
 /// Convert gnark format to G2 affine point
+/// EIP-196/197 format: [x.c1 | x.c0 | y.c1 | y.c0] (imaginary first!)
 pub fn g2_from_gnark(bytes: &[u8; G2_SIZE]) -> Result<G2Affine, ArkworksError> {
     if bytes.iter().all(|&b| b == 0) {
         return Ok(G2Affine::zero());
     }
 
-    let x_c0 = fq_from_be_bytes(&bytes[..32])?;
-    let x_c1 = fq_from_be_bytes(&bytes[32..64])?;
-    let y_c0 = fq_from_be_bytes(&bytes[64..96])?;
-    let y_c1 = fq_from_be_bytes(&bytes[96..])?;
+    // EIP-196 format: imaginary (c1) first, then real (c0)
+    let x_c1 = fq_from_be_bytes(&bytes[..32])?;      // x imaginary first
+    let x_c0 = fq_from_be_bytes(&bytes[32..64])?;    // x real second
+    let y_c1 = fq_from_be_bytes(&bytes[64..96])?;    // y imaginary first
+    let y_c0 = fq_from_be_bytes(&bytes[96..])?;      // y real second
 
     let x = Fq2::new(x_c0, x_c1);
     let y = Fq2::new(y_c0, y_c1);

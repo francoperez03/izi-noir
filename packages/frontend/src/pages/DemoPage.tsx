@@ -38,7 +38,10 @@ const DEFAULT_PRIVATE_INPUT = 10;
 let wasmInitialized = false;
 async function initBrowserWasm() {
   if (wasmInitialized) return;
-  await Promise.all([initACVM(fetch(acvm)), initNoirC(fetch(noirc))]);
+  await Promise.all([
+    initACVM({ module_or_path: acvm }),
+    initNoirC({ module_or_path: noirc }),
+  ]);
   markWasmInitialized();
   wasmInitialized = true;
 }
@@ -65,10 +68,20 @@ export function DemoPage() {
   const [deployError, setDeployError] = useState<string | null>(null);
 
   // Verify state
-  const [isVerifying, setIsVerifying] = useState(false);
+  type VerifyStep = 'idle' | 'building' | 'signing' | 'submitting' | 'confirming' | 'verified' | 'error';
+  const [verifyStep, setVerifyStep] = useState<VerifyStep>('idle');
   const [verifyTx, setVerifyTx] = useState<string | null>(null);
   const [verified, setVerified] = useState<boolean | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  // Verify steps config
+  const VERIFY_STEPS = [
+    { id: 'building', label: 'Building transaction', icon: '🔧' },
+    { id: 'signing', label: 'Waiting for wallet signature', icon: '✍️' },
+    { id: 'submitting', label: 'Submitting to Solana', icon: '🚀' },
+    { id: 'confirming', label: 'Waiting for confirmation', icon: '⏳' },
+    { id: 'verified', label: 'Verified on-chain', icon: '✓' },
+  ];
 
   // Wallet & Solana
   const { setVisible } = useWalletModal();
@@ -146,6 +159,13 @@ export function DemoPage() {
 
       const startTime = performance.now();
 
+      // DEBUG: Log the input values being used
+      console.log('=== PROOF GENERATION DEBUG ===');
+      console.log('publicInput state value:', publicInput, typeof publicInput);
+      console.log('privateInput state value:', privateInput, typeof privateInput);
+      console.log('Expected: secret * secret =', privateInput * privateInput);
+      console.log('Does it match publicInput?', privateInput * privateInput === publicInput);
+
       // Initialize IziNoir with Arkworks and Solana chain
       const izi = await IziNoir.init({
         provider: Provider.Arkworks,
@@ -160,6 +180,28 @@ export function DemoPage() {
         expected: String(publicInput),
         secret: String(privateInput),
       }) as SolanaProofData;
+
+      // DEBUG: Log generated proof details
+      console.log('Generated proof public inputs (hex):', solanaProof.publicInputs.hex);
+      console.log('Generated proof public inputs (bytes[0]):', Array.from(solanaProof.publicInputs.bytes[0]));
+      console.log('VK nrPublicInputs:', solanaProof.verifyingKey.nrPublicInputs);
+      console.log('==============================');
+
+      // LOCAL VERIFICATION: Verify the proof locally before on-chain
+      try {
+        const localVerified = await izi.verify(
+          solanaProof.proof.bytes,
+          solanaProof.publicInputs.hex
+        );
+        console.log('=== LOCAL VERIFICATION ===');
+        console.log('Local verification result:', localVerified ? '✓ VALID' : '✗ INVALID');
+        console.log('==========================');
+        if (!localVerified) {
+          throw new Error('Proof failed local verification! This is a bug in proof generation.');
+        }
+      } catch (verifyError) {
+        console.error('Local verification error:', verifyError);
+      }
 
       const endTime = performance.now();
       const time = Math.round(endTime - startTime);
@@ -223,16 +265,28 @@ export function DemoPage() {
     }
   }, [proof, connected, deploy, fetchBalance]);
 
-  // Verify on-chain
+  // Verify on-chain with step tracking
   const handleVerify = useCallback(async () => {
     if (!proof || !vkAccount) return;
 
-    setIsVerifying(true);
+    setVerifyStep('building');
     setVerifyError(null);
+    setVerified(null);
 
     try {
-      const result = await verify(proof, vkAccount);
+      // Small delay for UX (shows building step)
+      await new Promise(r => setTimeout(r, 400));
 
+      setVerifyStep('signing');
+
+      const result = await verify(
+        proof,
+        vkAccount,
+        // Callback for step updates
+        (step: 'submitting' | 'confirming') => setVerifyStep(step)
+      );
+
+      setVerifyStep('verified');
       setVerifyTx(result.txSignature);
       setVerified(result.verified);
 
@@ -249,12 +303,14 @@ export function DemoPage() {
 
     } catch (error) {
       console.error('Verify failed:', error);
+      setVerifyStep('error');
       setVerifyError((error as Error).message);
       animateError('.verify-panel');
-    } finally {
-      setIsVerifying(false);
     }
   }, [proof, vkAccount, verify, fetchBalance]);
+
+  // Computed state for button disabled
+  const isVerifying = verifyStep !== 'idle' && verifyStep !== 'verified' && verifyStep !== 'error';
 
   // Truncate address
   const truncateAddress = (address: string) => {
@@ -602,6 +658,20 @@ export function DemoPage() {
           </h2>
 
           <div className="verify-panel demo-panel opacity-0">
+            {/* Context: What we're verifying */}
+            {vkAccount && proof && verifyStep === 'idle' && !verified && (
+              <div className="verify-context mb-8 p-4 rounded-lg bg-black/30 border border-white/10 text-left max-w-md mx-auto">
+                <h4 className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Verifying claim:</h4>
+                <p className="text-white font-mono text-sm">
+                  "I know a <span className="text-[#14F195]">secret</span> whose square equals{' '}
+                  <span className="text-[#9945FF] font-bold">{publicInput}</span>"
+                </p>
+                <p className="text-gray-500 text-xs mt-2">
+                  The on-chain verifier will validate this without learning the secret.
+                </p>
+              </div>
+            )}
+
             {/* Verify button */}
             <button
               className="demo-btn-primary text-lg mb-8"
@@ -616,20 +686,67 @@ export function DemoPage() {
                   </svg>
                   Verifying...
                 </span>
+              ) : verified ? (
+                'Verified ✓'
               ) : (
                 'Verify Proof On-Chain'
               )}
             </button>
 
+            {/* Step Progress UI */}
+            {isVerifying && (
+              <div className="verify-steps space-y-2 max-w-sm mx-auto mb-8 text-left">
+                {VERIFY_STEPS.map((step, i) => {
+                  const currentIdx = VERIFY_STEPS.findIndex(s => s.id === verifyStep);
+                  const isActive = step.id === verifyStep;
+                  const isComplete = currentIdx > i;
+                  const isPending = currentIdx < i;
+
+                  return (
+                    <div
+                      key={step.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
+                        isActive ? 'bg-[#9945FF]/20 border border-[#9945FF]/50' :
+                        isComplete ? 'bg-[#14F195]/10' :
+                        'opacity-40'
+                      }`}
+                    >
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all ${
+                        isActive ? 'bg-[#9945FF] text-white animate-pulse' :
+                        isComplete ? 'bg-[#14F195] text-black' :
+                        'bg-gray-800 text-gray-500'
+                      }`}>
+                        {isComplete ? '✓' : step.icon}
+                      </span>
+                      <span className={`text-sm ${
+                        isActive ? 'text-white font-medium' :
+                        isComplete ? 'text-[#14F195]' :
+                        'text-gray-500'
+                      }`}>
+                        {step.label}
+                        {isActive && <span className="verify-dots ml-1"></span>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Error */}
             {verifyError && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-8 text-red-400 text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-8 text-red-400 text-sm max-w-md mx-auto">
                 {verifyError}
+                <button
+                  onClick={() => { setVerifyStep('idle'); setVerifyError(null); }}
+                  className="block mt-2 text-xs underline hover:text-red-300"
+                >
+                  Try again
+                </button>
               </div>
             )}
 
             {/* Success */}
-            {verified && (
+            {verified && verifyStep === 'verified' && (
               <div className="verify-success space-y-6">
                 <svg className="final-checkmark w-24 h-24 mx-auto" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="45" stroke="#14F195" strokeWidth="2" fill="none" opacity="0.3"/>
@@ -663,10 +780,12 @@ export function DemoPage() {
               </div>
             )}
 
-            {!verified && !verifyError && !isVerifying && (
+            {verifyStep === 'idle' && !verified && !verifyError && (
               <p className="text-gray-500 text-sm">
                 {!vkAccount
                   ? 'Deploy the VK account first'
+                  : !proof
+                  ? 'Generate a proof first'
                   : 'Click to verify your proof on Solana devnet'}
               </p>
             )}

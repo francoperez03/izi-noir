@@ -52,6 +52,36 @@ function prove(proving_key_b64, acir_json, witness_json) {
 exports.prove = prove;
 
 /**
+ * Generate a Groth16 proof from R1CS definition
+ *
+ * # Arguments
+ * * `proving_key_b64` - Base64-encoded proving key from setup
+ * * `r1cs_json` - JSON string of R1CS definition
+ * * `witness_json` - JSON object mapping witness indices to hex values
+ *
+ * # Returns
+ * * `JsProofResult` with proof and public inputs
+ * @param {string} proving_key_b64
+ * @param {string} r1cs_json
+ * @param {string} witness_json
+ * @returns {any}
+ */
+function prove_from_r1cs(proving_key_b64, r1cs_json, witness_json) {
+    const ptr0 = passStringToWasm0(proving_key_b64, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(r1cs_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(witness_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.prove_from_r1cs(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+exports.prove_from_r1cs = prove_from_r1cs;
+
+/**
  * Perform trusted setup for a circuit
  *
  * # Arguments
@@ -72,6 +102,28 @@ function setup(acir_json) {
     return takeFromExternrefTable0(ret[0]);
 }
 exports.setup = setup;
+
+/**
+ * Perform trusted setup from R1CS definition
+ *
+ * # Arguments
+ * * `r1cs_json` - JSON string of R1CS definition
+ *
+ * # Returns
+ * * `JsSetupResult` with base64-encoded proving and verifying keys
+ * @param {string} r1cs_json
+ * @returns {any}
+ */
+function setup_from_r1cs(r1cs_json) {
+    const ptr0 = passStringToWasm0(r1cs_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.setup_from_r1cs(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+exports.setup_from_r1cs = setup_from_r1cs;
 
 /**
  * Verify a Groth16 proof

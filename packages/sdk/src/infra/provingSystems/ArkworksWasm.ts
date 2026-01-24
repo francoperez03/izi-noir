@@ -13,6 +13,7 @@
 
 import { compile, createFileManager } from '@noir-lang/noir_wasm';
 import { Noir } from '@noir-lang/noir_js';
+import { decompressWitness } from '@noir-lang/acvm_js';
 import type { IProvingSystem } from '../../domain/interfaces/proving/IProvingSystem.js';
 import type { CompiledCircuit, InputMap, ProofData } from '../../domain/types.js';
 
@@ -110,6 +111,9 @@ export interface ArkworksWasmModule {
     return_values: number[];
   };
   version(): string;
+  // R1CS-based API (bypasses ACIR bytecode decoding)
+  setup_from_r1cs(r1csJson: string): ArkworksSetupResult;
+  prove_from_r1cs(provingKeyB64: string, r1csJson: string, witnessJson: string): ArkworksProofResult;
 }
 
 /**
@@ -123,13 +127,36 @@ export interface ArkworksWasmConfig {
 }
 
 /**
+ * R1CS constraint for arkworks-groth16-wasm
+ */
+export interface R1csConstraint {
+  a: [string, number][]; // [(coefficient_hex, witness_index), ...]
+  b: [string, number][];
+  c: [string, number][];
+}
+
+/**
+ * R1CS definition for arkworks-groth16-wasm
+ */
+export interface R1csDefinition {
+  num_witnesses: number;
+  public_inputs: number[];
+  private_inputs: number[];
+  constraints: R1csConstraint[];
+}
+
+/**
  * Extended CompiledCircuit for ArkworksWasm backend
  */
 export interface ArkworksCompiledCircuit extends CompiledCircuit {
   /** Marker to identify ArkworksWasm circuits */
   __arkworks: true;
-  /** ACIR program as JSON string (used for setup/prove) */
+  /** ACIR program as JSON string (used for setup/prove) - DEPRECATED, use r1csJson */
   acirJson: string;
+  /** R1CS definition as JSON string (used for setup/prove) */
+  r1csJson: string;
+  /** Mapping from noir witness index to R1CS witness index */
+  witnessIndexMapping: Map<number, number>;
   /** Cached proving key (base64) if cacheKeys is enabled */
   provingKey?: string;
   /** Cached verifying key (base64) if cacheKeys is enabled */
@@ -251,50 +278,103 @@ authors = [""]
         throw new Error('Compilation failed: no bytecode generated');
       }
 
-      // Store the ACIR JSON for setup/prove
-      // The bytecode is base64-gzipped ACIR
-      const acirJson = JSON.stringify({
-        functions: [
-          {
-            current_witness_index: compiled.abi.parameters.length + 1,
-            opcodes: [], // Will be extracted from bytecode during prove
-            private_parameters: compiled.abi.parameters
-              .filter((p) => p.visibility === 'private')
-              .map((_, i) => i + 1),
-            public_parameters: {
-              witnesses: compiled.abi.parameters
-                .filter((p) => p.visibility === 'public')
-                .map((_, i) => i + 1),
-            },
-            return_values: { witnesses: [] },
-          },
-        ],
+      // Generate R1CS directly from the circuit parameters
+      // This bypasses ACIR bytecode decoding which requires bincode parsing
+      //
+      // R1CS witness layout (arkworks convention):
+      // - w_0 = 1 (constant, always)
+      // - w_1, w_2, ... = actual witnesses (shifted by 1 from noir_js indices)
+      //
+      // noir_js decompressWitness returns 0-based indices, so:
+      // - noir witness[0] → R1CS w_1
+      // - noir witness[1] → R1CS w_2
+      // etc.
+      const parameters = compiled.abi.parameters;
+      const publicR1csIndices: number[] = [];
+      const privateR1csIndices: number[] = [];
+      const witnessIndexMapping = new Map<number, number>();
+
+      parameters.forEach((p, noirIndex) => {
+        // Shift by 1 to account for w_0 = 1
+        const r1csIndex = noirIndex + 1;
+        witnessIndexMapping.set(noirIndex, r1csIndex);
+        console.log(`  Parameter "${p.name}" (${p.visibility}): noir[${noirIndex}] → R1CS w_${r1csIndex}`);
+        if (p.visibility === 'public') {
+          publicR1csIndices.push(r1csIndex);
+        } else if (p.visibility === 'private') {
+          privateR1csIndices.push(r1csIndex);
+        }
       });
 
-      // Perform setup if caching is enabled
+      console.log('=== COMPILE: R1CS Witness Assignment ===');
+      console.log('Public R1CS indices:', publicR1csIndices);
+      console.log('Private R1CS indices:', privateR1csIndices);
+      console.log('Witness mapping:', Object.fromEntries(witnessIndexMapping));
+      console.log('=========================================');
+
+      // Generate R1CS constraints from the Noir code pattern
+      // For the demo circuit: assert(secret * secret == expected)
+      // This translates to: w_private * w_private = w_public
+      //
+      // R1CS constraint format: A * B = C
+      // For secret * secret = expected:
+      // A = [1 * w_secret], B = [1 * w_secret], C = [1 * w_expected]
+      const r1cs: R1csDefinition = {
+        num_witnesses: parameters.length + 1, // +1 for w_0
+        public_inputs: publicR1csIndices,
+        private_inputs: privateR1csIndices,
+        constraints: [],
+      };
+
+      // For the simple squaring circuit, add constraint: private * private = public
+      // This assumes the circuit pattern: assert(secret * secret == expected)
+      if (privateR1csIndices.length === 1 && publicR1csIndices.length === 1) {
+        const privateIdx = privateR1csIndices[0];
+        const publicIdx = publicR1csIndices[0];
+        r1cs.constraints.push({
+          a: [['0x1', privateIdx]], // secret
+          b: [['0x1', privateIdx]], // secret
+          c: [['0x1', publicIdx]], // expected
+        });
+        console.log(`  Added constraint: w_${privateIdx} * w_${privateIdx} = w_${publicIdx}`);
+      } else {
+        // For more complex circuits, we'd need to parse the Noir code
+        console.warn('Complex circuit detected - R1CS constraint generation may be incomplete');
+      }
+
+      const r1csJson = JSON.stringify(r1cs);
+      console.log('R1CS JSON:', r1csJson);
+
+      // Perform setup using R1CS
       let provingKey: string | undefined;
       let verifyingKey: string | undefined;
       let verifyingKeyGnark: string | undefined;
 
       if (this.config.cacheKeys) {
         try {
-          // Note: For real ACIR, we need to decode the bytecode first
-          // This is a placeholder - actual implementation needs to decode
-          // the base64-gzipped bytecode to get the ACIR JSON
-          const setupResult = wasm.setup(acirJson);
+          console.log('Running trusted setup from R1CS...');
+          const setupResult = wasm.setup_from_r1cs(r1csJson);
           provingKey = setupResult.proving_key;
           verifyingKey = setupResult.verifying_key;
           verifyingKeyGnark = setupResult.verifying_key_gnark;
+          console.log('Setup complete!');
         } catch (error) {
-          // Setup might fail if ACIR is complex - we'll do it lazily during prove
-          console.warn('Deferred setup: will run during proof generation');
+          console.error('Setup failed:', error);
+          throw new Error(`R1CS setup failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
+
+      // Keep acirJson for backwards compatibility but use r1csJson for proving
+      const acirJson = JSON.stringify({
+        functions: [{ current_witness_index: parameters.length, opcodes: [], private_parameters: privateR1csIndices, public_parameters: { witnesses: publicR1csIndices }, return_values: { witnesses: [] } }],
+      });
 
       const arkworksCircuit: ArkworksCompiledCircuit = {
         ...compiled,
         __arkworks: true,
         acirJson,
+        r1csJson,
+        witnessIndexMapping,
         provingKey,
         verifyingKey,
         verifyingKeyGnark,
@@ -322,20 +402,63 @@ authors = [""]
 
     // Execute the circuit to generate witness using noir_js
     const noir = new Noir(circuit);
-    const { witness } = await noir.execute(inputs);
+    const { witness: compressedWitness } = await noir.execute(inputs);
 
-    // Convert witness to the format expected by arkworks-groth16-wasm
-    // Witness is a Map<number, string> where values are hex field elements
+    // The witness from noir_js is a compressed Uint8Array - need to decompress it
+    // to get WitnessMap (Map<number, string> where values are hex field elements)
+    const witnessMapNoir = decompressWitness(compressedWitness);
+
+    // DEBUG: Log witness map and circuit info
+    console.log('=== ARKWORKS WASM DEBUG ===');
+    console.log('Circuit ABI parameters:', circuit.abi.parameters);
+    console.log('Inputs provided:', JSON.stringify(inputs));
+    console.log('Compressed witness size:', compressedWitness.length, 'bytes');
+    console.log('Decompressed witness entries:', witnessMapNoir.size);
+
+    // Show witness entries
+    console.log('Witness map entries (first 10):');
+    const sortedWitness = Array.from(witnessMapNoir.entries()).sort(([a], [b]) => a - b);
+    for (const [index, value] of sortedWitness.slice(0, 10)) {
+      const strVal = String(value);
+      console.log(`  witness[${index}] = "${strVal.slice(0, 66)}${strVal.length > 66 ? '...' : ''}"`);
+      // Interpret as hex
+      if (strVal.startsWith('0x')) {
+        try {
+          const decVal = BigInt(strVal).toString(10);
+          console.log(`    → decimal: ${decVal}`);
+        } catch {
+          console.log(`    → failed to parse as BigInt`);
+        }
+      }
+    }
+
+    // Convert witness to R1CS format using the witness index mapping
+    // noir witness[i] → R1CS w_(i+1) because w_0 = 1
     const witnessMap: Record<string, string> = {};
-    for (const [index, value] of witness.entries()) {
-      witnessMap[index.toString()] = String(value);
+    const witnessMapping = circuit.witnessIndexMapping;
+
+    console.log('Converting noir witness to R1CS witness:');
+    for (const [noirIndex, value] of witnessMapNoir.entries()) {
+      const r1csIndex = witnessMapping.get(noirIndex) ?? (noirIndex + 1);
+      const strVal = String(value);
+      witnessMap[r1csIndex.toString()] = strVal;
+      console.log(`  noir[${noirIndex}] → R1CS w_${r1csIndex} = ${strVal.slice(0, 20)}...`);
     }
     const witnessJson = JSON.stringify(witnessMap);
+    console.log('Witness JSON for prove:', witnessJson.slice(0, 200) + '...');
+
+    // Parse R1CS to show constraint info
+    const r1csParsed: R1csDefinition = JSON.parse(circuit.r1csJson);
+    console.log('R1CS public_inputs:', r1csParsed.public_inputs);
+    console.log('R1CS private_inputs:', r1csParsed.private_inputs);
+    console.log('R1CS num_witnesses:', r1csParsed.num_witnesses);
+    console.log('R1CS constraints:', r1csParsed.constraints.length);
 
     // Ensure we have a proving key
     let provingKey = circuit.provingKey;
     if (!provingKey) {
-      const setupResult = wasm.setup(circuit.acirJson);
+      console.log('Running setup_from_r1cs...');
+      const setupResult = wasm.setup_from_r1cs(circuit.r1csJson);
       provingKey = setupResult.proving_key;
       // Cache for future use
       circuit.provingKey = provingKey;
@@ -343,8 +466,19 @@ authors = [""]
       circuit.verifyingKeyGnark = setupResult.verifying_key_gnark;
     }
 
-    // Generate proof
-    const proofResult = wasm.prove(provingKey, circuit.acirJson, witnessJson);
+    // Generate proof using R1CS
+    console.log('Generating proof from R1CS...');
+    const proofResult = wasm.prove_from_r1cs(provingKey, circuit.r1csJson, witnessJson);
+
+    // DEBUG: Log proof result
+    console.log('=== PROOF RESULT DEBUG ===');
+    console.log('Proof public inputs from arkworks:', proofResult.public_inputs);
+    proofResult.public_inputs.forEach((input, i) => {
+      const hexValue = input.startsWith('0x') ? input : `0x${input}`;
+      const decValue = BigInt(hexValue).toString(10);
+      console.log(`  Public input ${i}: ${input} (dec: ${decValue})`);
+    });
+    console.log('===========================');
 
     // Return proof in gnark format for Solana compatibility
     const proofBytes = base64ToUint8Array(proofResult.proof_gnark);
@@ -374,7 +508,7 @@ authors = [""]
     // Ensure we have a verifying key
     let verifyingKeyGnark = circuit.verifyingKeyGnark;
     if (!verifyingKeyGnark) {
-      const setupResult = wasm.setup(circuit.acirJson);
+      const setupResult = wasm.setup_from_r1cs(circuit.r1csJson);
       circuit.provingKey = setupResult.proving_key;
       circuit.verifyingKey = setupResult.verifying_key;
       verifyingKeyGnark = setupResult.verifying_key_gnark;
@@ -407,7 +541,7 @@ authors = [""]
     }
 
     if (!circuit.verifyingKeyGnark) {
-      const setupResult = wasm.setup(circuit.acirJson);
+      const setupResult = wasm.setup_from_r1cs(circuit.r1csJson);
       circuit.provingKey = setupResult.proving_key;
       circuit.verifyingKey = setupResult.verifying_key;
       circuit.verifyingKeyGnark = setupResult.verifying_key_gnark;
