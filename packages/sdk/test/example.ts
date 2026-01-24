@@ -1,10 +1,10 @@
-import { createProof } from '../src/index.js';
+import { IziNoir, Provider, generateNoir, AcornParser } from '../src/index.js';
 
 // Declare assert for TypeScript (it's parsed, not executed)
 declare function assert(condition: boolean, message?: string): void;
 
 async function main() {
-  console.log('Testing noir-from-js...\n');
+  console.log('Testing IziNoir SDK...\n');
 
   try {
     // Test: Prove knowledge of a secret whose square equals public value
@@ -12,32 +12,60 @@ async function main() {
     console.log('Public inputs: [100]');
     console.log('Private inputs: [10]');
 
-    const result = await createProof(
-      [100],
-      [10],
-      ([expected], [secret]) => {
+    // Parse and generate Noir code
+    const parser = new AcornParser();
+    const parsed = parser.parse(
+      function ([expected], [secret]) {
         assert(secret * secret == expected);
-      }
+      },
+      [100],
+      [10]
     );
+    const noirCode = generateNoir(parsed);
 
     console.log('\n--- Generated Noir Code ---');
-    console.log(result.noirCode);
+    console.log(noirCode);
 
-    console.log('--- Results ---');
-    console.log('Proof size:', result.proof.length, 'bytes');
-    console.log('Public inputs:', result.publicInputs);
-    console.log('Verified:', result.verified);
+    // Initialize IziNoir with Barretenberg (UltraHonk)
+    const izi = await IziNoir.init({ provider: Provider.Barretenberg });
+
+    // Compile the circuit
+    const startCompile = performance.now();
+    await izi.compile(noirCode);
+    const compileMs = performance.now() - startCompile;
+
+    // Build inputs map from parsed circuit
+    const publicInputs = [100];
+    const privateInputs = [10];
+    const inputs: Record<string, string> = {};
+    for (let i = 0; i < parsed.publicParams.length; i++) {
+      inputs[parsed.publicParams[i].name] = String(publicInputs[i]);
+    }
+    for (let i = 0; i < parsed.privateParams.length; i++) {
+      inputs[parsed.privateParams[i].name] = String(privateInputs[i]);
+    }
+
+    // Generate proof
+    const startProve = performance.now();
+    const proofData = await izi.prove(inputs);
+    const proveMs = performance.now() - startProve;
+
+    // Verify proof
+    const startVerify = performance.now();
+    const verified = await izi.verify(proofData.proof, proofData.publicInputs);
+    const verifyMs = performance.now() - startVerify;
+
+    console.log('\n--- Results ---');
+    console.log('Proof size:', proofData.proof.length, 'bytes');
+    console.log('Public inputs:', proofData.publicInputs);
+    console.log('Verified:', verified);
 
     console.log('\n--- Timings ---');
-    console.log('Parse:', result.timings.parseMs.toFixed(2), 'ms');
-    console.log('Generate:', result.timings.generateMs.toFixed(2), 'ms');
-    console.log('Compile:', result.timings.compileMs.toFixed(2), 'ms');
-    console.log('Witness:', result.timings.witnessMs.toFixed(2), 'ms');
-    console.log('Proof:', result.timings.proofMs.toFixed(2), 'ms');
-    console.log('Verify:', result.timings.verifyMs.toFixed(2), 'ms');
-    console.log('Total:', result.timings.totalMs.toFixed(2), 'ms');
+    console.log('Compile:', compileMs.toFixed(2), 'ms');
+    console.log('Prove:', proveMs.toFixed(2), 'ms');
+    console.log('Verify:', verifyMs.toFixed(2), 'ms');
 
-    if (result.verified) {
+    if (verified) {
       console.log('\n✓ Test passed!');
     } else {
       console.log('\n✗ Test failed: proof not verified');

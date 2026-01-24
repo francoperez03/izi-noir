@@ -50,6 +50,19 @@ export interface VerifierOptions {
 // ========== Solana On-Chain Verification Types ==========
 
 /**
+ * Verifying key data for on-chain verification.
+ * Stored on the IziNoir instance after prove() is called.
+ */
+export interface VerifyingKeyData {
+  /** Base64-encoded VK in gnark format */
+  base64: string;
+  /** Raw VK bytes */
+  bytes: Uint8Array;
+  /** Number of public inputs for this circuit */
+  nrPublicInputs: number;
+}
+
+/**
  * Data ready for Solana on-chain verification.
  *
  * Contains everything needed to:
@@ -61,7 +74,9 @@ export interface VerifierOptions {
  *
  * @example
  * ```typescript
- * const solanaProof = await izi.proveForSolana(inputs);
+ * const izi = await IziNoir.init({ provider: Provider.Arkworks, chain: Chain.Solana });
+ * await izi.compile(noirCode);
+ * const solanaProof = await izi.prove(inputs);
  *
  * // Use directly in tests or transactions:
  * await program.methods.initVkFromBytes(
@@ -77,14 +92,7 @@ export interface VerifierOptions {
  */
 export interface SolanaProofData {
   /** Verifying key for init_vk instruction */
-  verifyingKey: {
-    /** Base64-encoded VK in gnark format */
-    base64: string;
-    /** Raw VK bytes */
-    bytes: Uint8Array;
-    /** Number of public inputs for this circuit */
-    nrPublicInputs: number;
-  };
+  verifyingKey: VerifyingKeyData;
 
   /** Groth16 proof for verify_proof instruction */
   proof: {

@@ -39,11 +39,12 @@
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist",
+    "copy:wasm": "mkdir -p src/wasm/nodejs src/wasm/web && cp ../arkworks-groth16-wasm/pkg-nodejs/*.js ../arkworks-groth16-wasm/pkg-nodejs/*.d.ts ../arkworks-groth16-wasm/pkg-nodejs/*.wasm src/wasm/nodejs/ && cp ../arkworks-groth16-wasm/pkg/*.js ../arkworks-groth16-wasm/pkg/*.d.ts ../arkworks-groth16-wasm/pkg/*.wasm src/wasm/web/",
+    "prebuild": "npm run copy:wasm",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
     "@aztec/bb.js": "3.0.0-devnet.20251212",
-    "@izi-noir/arkworks-groth16-wasm": "*",
     "@noir-lang/noir_js": "1.0.0-beta.13-1d260df.nightly",
     "@noir-lang/noir_wasm": "1.0.0-beta.13-1d260df.nightly",
     "@noir-lang/types": "1.0.0-beta.13-1d260df.nightly",

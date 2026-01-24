@@ -7,3 +7,5 @@ export type {
 } from './proving/index.js';
 
 export type { IParser } from './parsing/index.js';
+
+export type { IChainFormatter, ChainProofDataFor } from './chain/index.js';

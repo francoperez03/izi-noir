@@ -1,3 +1,5 @@
+import { Chain } from './chain.js';
+
 /**
  * Available proving system providers
  */
@@ -28,6 +30,14 @@ export interface CircuitPaths {
 export interface IziNoirConfig {
   /** The proving system provider to use */
   provider: Provider;
+  /**
+   * Target blockchain for proof formatting.
+   * If omitted, operates in offchain mode (raw proofs, no chain formatting).
+   */
+  chain?: Chain;
   /** Circuit paths - required for Sunspot provider */
   circuitPaths?: CircuitPaths;
 }
+
+// Re-export Chain for convenience
+export { Chain };

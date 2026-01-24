@@ -166,11 +166,15 @@ async function initWasm(): Promise<ArkworksWasmModule> {
     try {
       if (isNodeJs()) {
         // Node.js: use the nodejs target which doesn't require fetch
-        const module = await import('@izi-noir/arkworks-groth16-wasm/nodejs');
+        // Path resolves to dist/wasm/nodejs/ after bundling
+        // @ts-ignore - Dynamic import path resolved at runtime
+        const module = await import('../wasm/nodejs/arkworks_groth16_wasm.js');
         wasmModule = module as unknown as ArkworksWasmModule;
       } else {
         // Browser: use the web target with init function
-        const module = await import('@izi-noir/arkworks-groth16-wasm');
+        // Path resolves to dist/wasm/web/ after bundling
+        // @ts-ignore - Dynamic import path resolved at runtime
+        const module = await import('../wasm/web/arkworks_groth16_wasm.js');
         // Initialize WASM (wasm-pack generates an init function for web target)
         if (typeof module.default === 'function') {
           await module.default();

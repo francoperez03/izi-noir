@@ -2,7 +2,28 @@
 // Main API - Unified IziNoir class
 // =============================================================================
 
-export { IziNoir, Provider, type IziNoirConfig, type CircuitPaths } from './IziNoir.js';
+export {
+  IziNoir,
+  Provider,
+  Chain,
+  type IziNoirConfig,
+  type CircuitPaths,
+  type SolanaDeployData,
+} from './IziNoir.js';
+
+// Chain formatting types
+export type {
+  ChainId,
+  CircuitMetadata,
+  ChainMetadata,
+  SolanaChainMetadata,
+  EthereumChainMetadata,
+  ChainMetadataFor,
+} from './IziNoir.js';
+export type { IChainFormatter, ChainProofDataFor } from './IziNoir.js';
+
+// Chain formatters (for advanced users)
+export { SolanaFormatter } from './infra/chainFormatters/SolanaFormatter.js';
 
 // =============================================================================
 // WASM Initialization (for advanced users)
@@ -39,6 +60,7 @@ export type {
   IVerifier,
 } from './domain/interfaces/proving/index.js';
 export type { IParser } from './domain/interfaces/parsing/index.js';
+// Note: IChainFormatter and ChainProofDataFor are exported from IziNoir.js above
 
 // =============================================================================
 // Domain Types
@@ -54,6 +76,7 @@ export type {
   InputMap,
   ProverOptions,
   VerifierOptions,
+  VerifyingKeyData,
 } from './domain/types.js';
 
 export type {
@@ -70,16 +93,11 @@ export type {
 } from './domain/entities/circuit.js';
 
 // =============================================================================
-// Legacy API (backwards compatibility)
+// Legacy API (backwards compatibility - deprecated)
 // =============================================================================
 
-export {
-  createProof,
-  createDefaultContainer,
-  createArkworksWasmContainer,
-  createArkworksProof,
-} from './container.js';
-export type { CreateProofOptions } from './container.js';
+// Container factories (deprecated - use IziNoir.init() instead)
+export { createDefaultContainer, createArkworksWasmContainer } from './container.js';
 
 // For DI users
 export { CreateProofUseCase } from './application/CreateProofUseCase.js';
@@ -170,3 +188,10 @@ export type {
   VerificationEndpointOptions,
   BatchVerifyResult,
 } from './server/OffchainVerifier.js';
+
+// =============================================================================
+// Build Configuration
+// =============================================================================
+
+export { defineConfig } from './config/defineConfig.js';
+export type { IziNoirBuildConfig } from './config/defineConfig.js';
