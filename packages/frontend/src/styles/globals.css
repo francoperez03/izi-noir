@@ -9,6 +9,7 @@
     --noir-primary: #050505;
     --noir-elevated: #0A0A0A;
     --noir-orange: #FF6B35;
+    --izi-cyan: #00D4FF;
     --scroll-y: 30%;
   }
 
@@ -86,27 +87,35 @@
   /* Workflow step cards */
   .workflow-step {
     @apply p-6 rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm text-left;
-    transition: border-color 0.3s ease, transform 0.3s ease;
-  }
-
-  .workflow-step:hover {
-    transform: translateY(-2px);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
   .workflow-step.step-write:hover {
     border-color: var(--solana-purple);
+    box-shadow: 0 0 30px rgba(153, 69, 255, 0.25), inset 0 0 20px rgba(153, 69, 255, 0.05);
   }
 
   .workflow-step.step-prove:hover {
     border-color: var(--noir-orange);
+    box-shadow: 0 0 30px rgba(255, 107, 53, 0.25), inset 0 0 20px rgba(255, 107, 53, 0.05);
   }
 
   .workflow-step.step-deploy:hover {
     border-color: var(--solana-green);
+    box-shadow: 0 0 30px rgba(20, 241, 149, 0.25), inset 0 0 20px rgba(20, 241, 149, 0.05);
   }
 
   .workflow-step.step-verify:hover {
     border-color: var(--solana-purple);
+    box-shadow: 0 0 25px rgba(153, 69, 255, 0.15), 0 0 25px rgba(20, 241, 149, 0.15);
+  }
+
+  /* Code overflow fix */
+  .workflow-step pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow: hidden;
   }
 
   /* Feature cards */
@@ -125,6 +134,196 @@
   /* Workflow arrow connector */
   .workflow-arrow {
     @apply text-white/20;
+  }
+
+  /* ================================
+     WORKFLOW VERTICAL LAYOUT
+     ================================ */
+
+  .workflow-step-vertical {
+    @apply w-full rounded-2xl border border-white/10 bg-black/30 backdrop-blur-sm;
+    @apply transition-all duration-300;
+  }
+
+  .workflow-step-vertical:hover {
+    @apply border-white/20;
+  }
+
+  .step-header {
+    @apply flex items-center gap-4 p-6 pb-0;
+  }
+
+  .step-number {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg;
+  }
+
+  .step-label {
+    @apply text-sm uppercase tracking-widest font-medium;
+  }
+
+  .step-content {
+    @apply p-6;
+  }
+
+  .step-description {
+    @apply text-gray-400 text-base mt-4;
+  }
+
+  /* Syntax highlighted code block */
+  .code-block {
+    @apply p-4 rounded-lg bg-black/60 font-mono text-sm overflow-x-auto leading-relaxed;
+  }
+
+  /* Step colors - Init */
+  .step-init .step-number { background: rgba(0, 212, 255, 0.2); color: var(--izi-cyan); }
+  .step-init .step-label { color: var(--izi-cyan); }
+  .step-init:hover { border-color: var(--izi-cyan); box-shadow: 0 0 30px rgba(0, 212, 255, 0.15); }
+
+  /* Step colors - Write */
+  .step-write .step-number { @apply bg-solana-purple/20 text-solana-purple; }
+  .step-write .step-label { @apply text-solana-purple; }
+  .step-write:hover { border-color: var(--solana-purple); box-shadow: 0 0 30px rgba(153, 69, 255, 0.15); }
+
+  /* Step colors - Prove */
+  .step-prove .step-number { @apply bg-noir-orange/20 text-noir-orange; }
+  .step-prove .step-label { @apply text-noir-orange; }
+  .step-prove:hover { border-color: var(--noir-orange); box-shadow: 0 0 30px rgba(255, 107, 53, 0.15); }
+
+  /* Step colors - Deploy */
+  .step-deploy .step-number { @apply bg-solana-green/20 text-solana-green; }
+  .step-deploy .step-label { @apply text-solana-green; }
+  .step-deploy:hover { border-color: var(--solana-green); box-shadow: 0 0 30px rgba(20, 241, 149, 0.15); }
+
+  /* Step colors - Verify */
+  .step-verify .step-number {
+    @apply bg-gradient-to-r from-solana-purple/20 to-solana-green/20;
+  }
+  .step-verify .step-label {
+    background: linear-gradient(90deg, var(--solana-purple), var(--solana-green));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .step-verify:hover {
+    border-color: var(--solana-purple);
+    box-shadow: 0 0 25px rgba(153, 69, 255, 0.12), 0 0 25px rgba(20, 241, 149, 0.12);
+  }
+
+  /* ================================
+     CARD STACK (Under the Hood)
+     ================================ */
+
+  .card-stack {
+    perspective: 1200px;
+    perspective-origin: center center;
+  }
+
+  .hood-card {
+    @apply absolute inset-x-0 top-0;
+    @apply rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md;
+    @apply p-5 md:p-6;
+    transform-style: preserve-3d;
+    transition: box-shadow 0.3s ease;
+    will-change: transform, opacity;
+  }
+
+  /* Initial stack positions - staggered behind */
+  .hood-card.card-js    { transform: translateY(0) scale(1); }
+  .hood-card.card-noir  { transform: translateY(15px) scale(0.97); }
+  .hood-card.card-acir  { transform: translateY(30px) scale(0.94); }
+  .hood-card.card-r1cs  { transform: translateY(45px) scale(0.91); }
+  .hood-card.card-proof { transform: translateY(60px) scale(0.88); }
+
+  /* Card header */
+  .card-header {
+    @apply flex items-center gap-2 mb-4;
+  }
+
+  .card-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .card-label {
+    @apply text-xs uppercase tracking-widest font-medium;
+  }
+
+  /* Card content visual (for non-code cards) */
+  .card-content-visual {
+    @apply py-4;
+  }
+
+  /* Transformer badges */
+  .transformer {
+    @apply absolute left-1/2 top-1/2;
+    @apply px-5 py-2.5 rounded-xl font-mono text-sm font-bold;
+    @apply border backdrop-blur-md;
+    @apply opacity-0 pointer-events-none;
+    transform: translate(-50%, -50%) scale(0.8);
+    z-index: 10;
+  }
+
+  .transformer-acorn {
+    @apply bg-black/80 border-izi-cyan/50;
+    color: var(--izi-cyan);
+  }
+
+  .transformer-noir {
+    @apply bg-black/80 border-solana-purple/50;
+    color: var(--solana-purple);
+  }
+
+  .transformer-arkworks {
+    @apply bg-black/80 border-noir-orange/50;
+    color: var(--noir-orange);
+  }
+
+  .transformer-groth16 {
+    @apply bg-black/80 border-solana-green/50;
+    color: var(--solana-green);
+  }
+
+  /* Progress dots */
+  .hood-progress {
+    @apply flex justify-center gap-2;
+  }
+
+  .progress-dot {
+    @apply w-2 h-2 rounded-full bg-white/20 transition-all duration-300;
+  }
+
+  .progress-dot.active {
+    @apply w-6 bg-solana-purple;
+  }
+
+  /* Card border colors on hover/active */
+  .hood-card.card-js:hover,
+  .hood-card.card-js.active {
+    border-color: var(--izi-cyan);
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+  }
+
+  .hood-card.card-noir:hover,
+  .hood-card.card-noir.active {
+    border-color: var(--solana-purple);
+    box-shadow: 0 0 30px rgba(153, 69, 255, 0.15);
+  }
+
+  .hood-card.card-acir:hover,
+  .hood-card.card-acir.active {
+    border-color: var(--noir-orange);
+    box-shadow: 0 0 30px rgba(255, 107, 53, 0.15);
+  }
+
+  .hood-card.card-r1cs:hover,
+  .hood-card.card-r1cs.active {
+    border-color: var(--solana-green);
+    box-shadow: 0 0 30px rgba(20, 241, 149, 0.15);
+  }
+
+  .hood-card.card-proof:hover,
+  .hood-card.card-proof.active {
+    border-color: var(--solana-green);
+    box-shadow: 0 0 40px rgba(20, 241, 149, 0.2);
   }
 }
 
@@ -152,21 +351,26 @@
 @layer components {
   /* Demo sections */
   .demo-section {
-    @apply min-h-screen flex items-center justify-center px-4 py-16;
+    @apply min-h-[auto] flex items-center justify-center px-4 py-16;
+  }
+
+  .demo-section-hero {
+    @apply min-h-screen;
   }
 
   /* Editor panel - code editor look */
   .editor-panel {
-    @apply rounded-xl border border-white/10 bg-black/60 backdrop-blur-md overflow-hidden;
-    transition: border-color 0.3s ease, opacity 0.3s ease;
+    @apply rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md overflow-hidden;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
   }
 
   .editor-panel:hover {
-    @apply border-white/20;
+    @apply border-white/10;
+    box-shadow: 0 0 30px rgba(153, 69, 255, 0.1);
   }
 
   .editor-header {
-    @apply px-4 py-3 border-b border-white/10 flex items-center gap-2;
+    @apply px-4 py-3 border-b border-white/5 flex items-center gap-2;
   }
 
   .editor-dot {
@@ -183,6 +387,13 @@
 
   .editor-content {
     @apply p-4 font-mono text-sm;
+  }
+
+  .editor-content pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow: hidden;
   }
 
   /* Code textarea */
@@ -204,13 +415,14 @@
 
   /* Result cards */
   .result-card {
-    @apply p-5 rounded-xl border border-white/10 bg-black/30 text-center;
-    transition: border-color 0.3s ease, transform 0.3s ease;
+    @apply p-6 rounded-2xl border border-white/5 bg-black/30 text-center;
+    transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
   }
 
   .result-card:hover {
-    @apply border-white/20;
-    transform: translateY(-2px);
+    @apply border-white/10;
+    transform: translateY(-4px);
+    box-shadow: 0 0 25px rgba(153, 69, 255, 0.15);
   }
 
   .result-value {
@@ -322,8 +534,13 @@
 
   /* Demo panel */
   .demo-panel {
-    @apply p-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm;
-    transition: border-color 0.3s ease, opacity 0.3s ease;
+    @apply p-6 rounded-2xl border border-white/5 bg-black/30 backdrop-blur-sm;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+  }
+
+  .demo-panel:hover {
+    @apply border-white/10;
+    box-shadow: 0 0 30px rgba(153, 69, 255, 0.1);
   }
 
   /* Verified badge */

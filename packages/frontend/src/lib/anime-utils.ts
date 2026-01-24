@@ -12,7 +12,7 @@ export function initLandingAnimations() {
     document.querySelectorAll('.hero-tagline, .hero-cta, .problem-message, .proof-title').forEach(el => {
       (el as HTMLElement).style.opacity = '1';
     });
-    document.querySelectorAll('.panel-js, .panel-noir, .panel-proof').forEach(el => {
+    document.querySelectorAll('.hood-title, .hood-card').forEach(el => {
       (el as HTMLElement).style.opacity = '1';
     });
     document.querySelectorAll('.proof-cta').forEach(el => {
@@ -110,10 +110,10 @@ function initScrollObservers() {
     problemObserver.observe(problemSection);
   }
 
-  // Transformation section - scroll synced
-  const transformSection = document.querySelector('.section-transformation');
-  if (transformSection) {
-    initTransformationScroll(transformSection as HTMLElement);
+  // Hood section - card stack animation
+  const hoodSection = document.querySelector('.section-hood');
+  if (hoodSection) {
+    initHoodStackAnimation(hoodSection as HTMLElement);
   }
 
   // Proof section observer
@@ -193,112 +193,194 @@ function problemAnimation() {
 }
 
 /**
- * Transformation section scroll-synced animation (vanilla JS, no anime.js needed)
+ * Hood section card stack animation
  */
-function initTransformationScroll(container: HTMLElement) {
-  const stickyContainer = container.querySelector('.sticky');
-  if (!stickyContainer) return;
+function initHoodStackAnimation(container: HTMLElement) {
+  const cardOrder = ['js', 'noir', 'acir', 'r1cs', 'proof'];
+  const transformers = ['acorn', 'noir', 'arkworks', 'groth16'];
+  let currentCard = 0;
+  let isAnimating = false;
 
-  let lastProgress = 0;
+  // Get all cards
+  const cards = cardOrder.map(name => container.querySelector(`.card-${name}`) as HTMLElement);
+  const progressDots = container.querySelectorAll('.progress-dot');
 
-  const updateAnimation = () => {
+  // Initial entry animation
+  const entryTl = createTimeline({
+    defaults: { ease: 'outExpo' },
+  });
+
+  // Title fade in
+  entryTl.add('.hood-title', {
+    opacity: [0, 1],
+    translateY: [30, 0],
+    duration: 800,
+  });
+
+  // Cards stagger in from bottom
+  cardOrder.forEach((cardName, index) => {
+    const offset = index * 15;
+    entryTl.add(`.card-${cardName}`, {
+      opacity: [0, 1],
+      translateY: [60 + offset, offset],
+      scale: [0.9, 1 - index * 0.03],
+      duration: 500,
+    }, index === 0 ? '-=400' : '-=400');
+  });
+
+  // Function to reveal next card
+  function revealNextCard() {
+    if (currentCard >= cardOrder.length - 1 || isAnimating) return;
+    isAnimating = true;
+
+    const currentEl = cards[currentCard];
+    const transformerEl = container.querySelector(`.transformer-${transformers[currentCard]}`) as HTMLElement;
+
+    const tl = createTimeline({
+      defaults: { ease: 'outExpo' },
+    });
+
+    // 1. Current card flies away (up and to the right with rotation)
+    tl.add(currentEl, {
+      translateX: [0, 250],
+      translateY: [currentCard * 15, -150],
+      rotate: [0, 12],
+      opacity: [1, 0],
+      scale: [1, 0.85],
+      duration: 500,
+    });
+
+    // 2. Transformer badge appears
+    if (transformerEl) {
+      tl.add(transformerEl, {
+        opacity: [0, 1],
+        scale: [0.7, 1],
+        duration: 350,
+      }, '-=250');
+
+      // 3. Transformer badge fades out
+      tl.add(transformerEl, {
+        opacity: [1, 0],
+        scale: [1, 1.15],
+        duration: 250,
+      }, '+=150');
+    }
+
+    // 4. Remaining cards shift up
+    const remainingCards = cards.slice(currentCard + 1);
+    remainingCards.forEach((card, i) => {
+      if (!card) return;
+      const newOffset = i * 15;
+      const newScale = 1 - i * 0.03;
+      tl.add(card, {
+        translateY: newOffset,
+        scale: newScale,
+        duration: 350,
+      }, transformerEl ? '-=250' : '-=200');
+    });
+
+    // 5. Update progress dots
+    tl.call(() => {
+      progressDots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentCard + 1);
+      });
+      currentCard++;
+      isAnimating = false;
+    });
+  }
+
+  // Function to go back to previous card
+  function revealPrevCard() {
+    if (currentCard <= 0 || isAnimating) return;
+    isAnimating = true;
+
+    currentCard--;
+    const cardEl = cards[currentCard];
+
+    const tl = createTimeline({
+      defaults: { ease: 'outExpo' },
+    });
+
+    // Bring card back
+    tl.add(cardEl, {
+      translateX: [250, 0],
+      translateY: [-150, currentCard * 15],
+      rotate: [12, 0],
+      opacity: [0, 1],
+      scale: [0.85, 1],
+      duration: 500,
+    });
+
+    // Shift remaining cards back down
+    const remainingCards = cards.slice(currentCard + 1);
+    remainingCards.forEach((card, i) => {
+      if (!card) return;
+      const newOffset = (i + 1) * 15;
+      const newScale = 1 - (i + 1) * 0.03;
+      tl.add(card, {
+        translateY: newOffset,
+        scale: newScale,
+        duration: 350,
+      }, '-=400');
+    });
+
+    // Update progress dots
+    tl.call(() => {
+      progressDots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentCard);
+      });
+      isAnimating = false;
+    });
+  }
+
+  // Click handler for next card
+  container.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    // Don't trigger on progress dots
+    if (target.classList.contains('progress-dot')) {
+      const cardIndex = parseInt(target.dataset.card || '0', 10);
+      while (currentCard < cardIndex) revealNextCard();
+      while (currentCard > cardIndex) revealPrevCard();
+      return;
+    }
+    revealNextCard();
+  });
+
+  // Scroll-based triggering
+  let lastScrollProgress = 0;
+  const thresholds = [0.25, 0.40, 0.55, 0.70];
+
+  function onScroll() {
     const rect = container.getBoundingClientRect();
-    const containerHeight = container.offsetHeight;
     const viewportHeight = window.innerHeight;
+    const sectionHeight = container.offsetHeight;
 
-    // Calculate scroll progress through this section (0 to 1)
-    const scrollStart = rect.top;
-    const scrollEnd = rect.bottom - viewportHeight;
-    const scrollRange = containerHeight - viewportHeight;
+    // Calculate progress: 0 when section top enters, 1 when section bottom leaves
+    const progress = Math.max(0, Math.min(1,
+      (viewportHeight - rect.top) / (sectionHeight + viewportHeight * 0.5)
+    ));
 
-    let progress = 0;
-    if (scrollStart <= 0 && scrollEnd >= 0) {
-      progress = Math.abs(scrollStart) / scrollRange;
-    } else if (scrollEnd < 0) {
-      progress = 1;
-    }
+    // Forward transitions
+    thresholds.forEach((threshold, i) => {
+      if (lastScrollProgress < threshold && progress >= threshold && currentCard === i) {
+        revealNextCard();
+      }
+    });
 
-    progress = Math.max(0, Math.min(1, progress));
+    // Backward transitions
+    thresholds.forEach((threshold, i) => {
+      if (lastScrollProgress >= threshold && progress < threshold && currentCard === i + 1) {
+        revealPrevCard();
+      }
+    });
 
-    // Only update if progress changed significantly
-    if (Math.abs(progress - lastProgress) < 0.005) return;
-    lastProgress = progress;
+    lastScrollProgress = progress;
+  }
 
-    const panelJs = document.querySelector('.panel-js') as HTMLElement;
-    const panelNoir = document.querySelector('.panel-noir') as HTMLElement;
-    const panelProof = document.querySelector('.panel-proof') as HTMLElement;
-    const flowLine1 = document.querySelector('.flow-line-1') as SVGPathElement;
-    const flowLine2 = document.querySelector('.flow-line-2') as SVGPathElement;
+  window.addEventListener('scroll', onScroll, { passive: true });
 
-    if (!panelJs || !panelNoir || !panelProof) return;
-
-    // Calculate individual opacities based on progress
-    let jsOpacity = 0.5;
-    let noirOpacity = 0.5;
-    let proofOpacity = 0.5;
-    let line1Progress = 0;
-    let line2Progress = 0;
-
-    if (progress < 0.33) {
-      // Phase 1: JS active
-      const phase = progress / 0.33;
-      jsOpacity = 0.5 + phase * 0.5;
-      line1Progress = phase;
-    } else if (progress < 0.66) {
-      // Phase 2: Noir active
-      const phase = (progress - 0.33) / 0.33;
-      jsOpacity = 1 - phase * 0.4;
-      noirOpacity = 0.5 + phase * 0.5;
-      line1Progress = 1;
-      line2Progress = phase;
-    } else {
-      // Phase 3: Proof active
-      const phase = (progress - 0.66) / 0.34;
-      jsOpacity = 0.6;
-      noirOpacity = 1 - phase * 0.4;
-      proofOpacity = 0.5 + phase * 0.5;
-      line1Progress = 1;
-      line2Progress = 1;
-    }
-
-    // Apply styles
-    panelJs.style.opacity = String(jsOpacity);
-    panelJs.style.borderColor = jsOpacity > 0.6 ? '#9945FF' : 'rgba(255,255,255,0.1)';
-
-    panelNoir.style.opacity = String(noirOpacity);
-    panelNoir.style.borderColor = noirOpacity > 0.6 ? '#FF6B35' : 'rgba(255,255,255,0.1)';
-
-    panelProof.style.opacity = String(proofOpacity);
-    panelProof.style.borderColor = proofOpacity > 0.6 ? '#14F195' : 'rgba(255,255,255,0.1)';
-
-    // Animate flow lines
-    if (flowLine1) {
-      const length1 = flowLine1.getTotalLength();
-      flowLine1.style.strokeDasharray = String(length1);
-      flowLine1.style.strokeDashoffset = String(length1 * (1 - line1Progress));
-    }
-    if (flowLine2) {
-      const length2 = flowLine2.getTotalLength();
-      flowLine2.style.strokeDasharray = String(length2);
-      flowLine2.style.strokeDashoffset = String(length2 * (1 - line2Progress));
-    }
-  };
-
-  // Initial state
-  document.querySelectorAll('.panel-js, .panel-noir, .panel-proof').forEach(el => {
-    (el as HTMLElement).style.opacity = '0.5';
-  });
-
-  // Initialize flow lines
-  document.querySelectorAll('.flow-line-1, .flow-line-2').forEach(el => {
-    const path = el as SVGPathElement;
-    const length = path.getTotalLength();
-    path.style.strokeDasharray = String(length);
-    path.style.strokeDashoffset = String(length);
-  });
-
-  window.addEventListener('scroll', updateAnimation, { passive: true });
-  updateAnimation();
+  // Set initial progress dot
+  progressDots[0]?.classList.add('active');
 }
 
 /**
@@ -402,12 +484,58 @@ function workflowAnimation() {
     duration: 600,
   }, '-=400');
 
-  // Arrows fade in
+  // Initialize and animate flow paths
+  const flowPaths = document.querySelectorAll('.flow-path');
+  if (flowPaths.length > 0) {
+    flowPaths.forEach((path) => {
+      const p = path as SVGPathElement;
+      const length = p.getTotalLength();
+      p.style.strokeDasharray = String(length);
+      p.style.strokeDashoffset = String(length);
+    });
+
+    tl.add('.flow-path', {
+      strokeDashoffset: 0,
+      delay: stagger(150),
+      duration: 400,
+      ease: 'outQuad',
+    }, '-=300');
+  }
+
+  // Arrows fade in (legacy, in case any remain)
   tl.add('.workflow-arrow', {
     opacity: [0, 1],
     delay: stagger(150),
     duration: 300,
   }, '-=600');
+}
+
+/**
+ * 3D Tilt effect for workflow cards
+ */
+function initWorkflowCardTilt() {
+  const cards = document.querySelectorAll('.workflow-step');
+
+  cards.forEach((card) => {
+    const el = card as HTMLElement;
+
+    el.addEventListener('mousemove', (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      const rotateX = (y - centerY) / 15;
+      const rotateY = (centerX - x) / 15;
+
+      el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    });
+
+    el.addEventListener('mouseleave', () => {
+      el.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+    });
+  });
 }
 
 /**

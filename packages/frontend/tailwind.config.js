@@ -13,6 +13,9 @@ export default {
           elevated: '#0A0A0A',
           orange: '#FF6B35',
         },
+        izi: {
+          cyan: '#00D4FF',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

@@ -1,3 +1,7 @@
+import { Buffer } from "buffer";
+// Polyfill for browser compatibility
+(window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";

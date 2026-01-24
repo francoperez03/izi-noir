@@ -8,6 +8,7 @@ import noirc from '@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url';
 import {
   IziNoir,
   Provider,
+  Chain,
   markWasmInitialized,
   AcornParser,
   generateNoir,
@@ -22,6 +23,7 @@ import {
   animateError,
 } from '../lib/demo-animations';
 import { useSolanaDemo } from '../hooks/useSolanaDemo';
+import { CodeBlock } from '../components/CodeBlock';
 
 // Default circuit code
 const DEFAULT_CIRCUIT = `([expected], [secret]) => {
@@ -144,17 +146,20 @@ export function DemoPage() {
 
       const startTime = performance.now();
 
-      // Initialize IziNoir with Arkworks
-      const izi = await IziNoir.init({ provider: Provider.Arkworks });
+      // Initialize IziNoir with Arkworks and Solana chain
+      const izi = await IziNoir.init({
+        provider: Provider.Arkworks,
+        chain: Chain.Solana,
+      });
 
       // Compile the Noir code
       await izi.compile(noirCode);
 
-      // Generate Solana-ready proof
-      const solanaProof = await izi.proveForSolana({
+      // Generate proof (returns SolanaProofData because chain is Solana)
+      const solanaProof = await izi.prove({
         expected: String(publicInput),
         secret: String(privateInput),
-      });
+      }) as SolanaProofData;
 
       const endTime = performance.now();
       const time = Math.round(endTime - startTime);
@@ -259,7 +264,7 @@ export function DemoPage() {
   return (
     <div className="demo-container overflow-x-hidden">
       {/* ===== HERO SECTION ===== */}
-      <section className="demo-section relative">
+      <section className="demo-section demo-section-hero relative">
         {/* Circuit background */}
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none opacity-20"
@@ -304,80 +309,83 @@ export function DemoPage() {
 
       {/* ===== EDITOR SECTION ===== */}
       <section className="demo-section demo-section-editor">
-        <div className="max-w-6xl mx-auto w-full">
-          <h2 className="demo-section-title editor-title text-3xl md:text-4xl font-bold text-center mb-12 opacity-0">
+        <div className="max-w-4xl mx-auto w-full">
+          <h2 className="demo-section-title editor-title text-5xl md:text-6xl font-bold text-center mb-12 opacity-0">
             <span className="text-solana-purple">1.</span> Write Your Circuit
           </h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-6">
             {/* Circuit Editor */}
-            <div className="editor-panel opacity-0">
-              <div className="editor-header">
-                <span className="editor-dot red"></span>
-                <span className="editor-dot yellow"></span>
-                <span className="editor-dot green"></span>
-                <span className="editor-title">circuit.js</span>
+            <div className="workflow-step workflow-step-vertical step-write opacity-0">
+              <div className="step-header">
+                <span className="step-number">JS</span>
+                <span className="step-label">circuit.js</span>
               </div>
-              <div className="editor-content">
+              <div className="step-content">
                 <textarea
-                  className="code-textarea"
+                  className="code-block w-full bg-black/60 resize-none focus:outline-none focus:ring-1 focus:ring-solana-purple/50"
                   value={circuitCode}
                   onChange={(e) => setCircuitCode(e.target.value)}
-                  rows={6}
+                  rows={4}
                   spellCheck={false}
                 />
               </div>
             </div>
 
             {/* Noir Preview */}
-            <div className="editor-panel opacity-0">
-              <div className="editor-header">
-                <span className="editor-dot red"></span>
-                <span className="editor-dot yellow"></span>
-                <span className="editor-dot green"></span>
-                <span className="editor-title">circuit.nr</span>
-                <span className="ml-auto text-xs text-noir-orange">Noir</span>
+            <div className="workflow-step workflow-step-vertical step-prove opacity-0">
+              <div className="step-header">
+                <span className="step-number">NR</span>
+                <span className="step-label">circuit.nr</span>
               </div>
-              <div className="editor-content">
+              <div className="step-content">
                 {transpileError ? (
-                  <pre className="text-red-400 text-sm">{transpileError}</pre>
+                  <pre className="code-block text-red-400">{transpileError}</pre>
                 ) : noirCode ? (
-                  <pre className="text-gray-300 text-sm whitespace-pre-wrap">{noirCode}</pre>
+                  <CodeBlock code={noirCode} />
                 ) : (
-                  <p className="text-gray-500 text-sm">Transpiling...</p>
+                  <div className="code-block text-gray-500">Transpiling...</div>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Inputs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div className="editor-panel opacity-0 p-4">
-              <label className="demo-input-label">
-                <span className="w-2 h-2 rounded-full bg-solana-green inline-block mr-2"></span>
-                Public Input (expected)
-              </label>
-              <input
-                type="number"
-                className="demo-input-field w-full"
-                value={publicInput}
-                onChange={(e) => setPublicInput(Number(e.target.value))}
-              />
-              <p className="text-xs text-gray-600 mt-2">Everyone can see this value</p>
-            </div>
+            {/* Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="workflow-step workflow-step-vertical step-deploy opacity-0">
+                <div className="step-header">
+                  <span className="step-number">
+                    <span className="w-2 h-2 rounded-full bg-solana-green inline-block"></span>
+                  </span>
+                  <span className="step-label">Public Input</span>
+                </div>
+                <div className="step-content">
+                  <input
+                    type="number"
+                    className="demo-input-field w-full"
+                    value={publicInput}
+                    onChange={(e) => setPublicInput(Number(e.target.value))}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Everyone can see this value</p>
+                </div>
+              </div>
 
-            <div className="editor-panel opacity-0 p-4">
-              <label className="demo-input-label">
-                <span className="w-2 h-2 rounded-full bg-solana-purple inline-block mr-2"></span>
-                Private Input (secret)
-              </label>
-              <input
-                type="number"
-                className="demo-input-field w-full"
-                value={privateInput}
-                onChange={(e) => setPrivateInput(Number(e.target.value))}
-              />
-              <p className="text-xs text-gray-600 mt-2">Only you know this value</p>
+              <div className="workflow-step workflow-step-vertical step-write opacity-0">
+                <div className="step-header">
+                  <span className="step-number">
+                    <span className="w-2 h-2 rounded-full bg-solana-purple inline-block"></span>
+                  </span>
+                  <span className="step-label">Private Input</span>
+                </div>
+                <div className="step-content">
+                  <input
+                    type="number"
+                    className="demo-input-field w-full"
+                    value={privateInput}
+                    onChange={(e) => setPrivateInput(Number(e.target.value))}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Only you know this value</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -386,7 +394,7 @@ export function DemoPage() {
       {/* ===== PROOF SECTION ===== */}
       <section className="demo-section demo-section-proof">
         <div className="max-w-4xl mx-auto w-full text-center">
-          <h2 className="demo-section-title proof-title text-3xl md:text-4xl font-bold mb-12 opacity-0">
+          <h2 className="demo-section-title proof-title text-5xl md:text-6xl font-bold mb-12 opacity-0">
             <span className="text-noir-orange">2.</span> Generate Proof
           </h2>
 
@@ -451,7 +459,7 @@ export function DemoPage() {
       {/* ===== DEPLOY SECTION ===== */}
       <section className="demo-section demo-section-deploy">
         <div className="max-w-4xl mx-auto w-full">
-          <h2 className="demo-section-title deploy-title text-3xl md:text-4xl font-bold text-center mb-12 opacity-0">
+          <h2 className="demo-section-title deploy-title text-5xl md:text-6xl font-bold text-center mb-12 opacity-0">
             <span className="text-solana-green">3.</span> Deploy to Solana
           </h2>
 
@@ -589,7 +597,7 @@ export function DemoPage() {
       {/* ===== VERIFY SECTION ===== */}
       <section className="demo-section demo-section-verify">
         <div className="max-w-4xl mx-auto w-full text-center">
-          <h2 className="demo-section-title verify-title text-3xl md:text-4xl font-bold mb-12 opacity-0">
+          <h2 className="demo-section-title verify-title text-5xl md:text-6xl font-bold mb-12 opacity-0">
             <span className="brand-gradient">4.</span> Verify On-Chain
           </h2>
 
@@ -680,7 +688,7 @@ export function DemoPage() {
               Home
             </Link>
             <a
-              href="https://github.com/izi-noir/izi-noir"
+              href="https://github.com/francoperez03/izi-noir"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"

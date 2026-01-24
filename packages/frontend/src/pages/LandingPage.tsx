@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { initLandingAnimations, cleanupAnimations } from '../lib/anime-utils';
+import { CodeBlock } from '../components/CodeBlock';
+import { PipelineCardStack } from '../components/pipeline';
 
 export function LandingPage() {
   useEffect(() => {
@@ -99,226 +101,138 @@ export function LandingPage() {
         <div className="relative max-w-3xl text-center">
           {/* Faded code background */}
           <pre className="problem-code text-xs md:text-sm text-gray-700 font-mono leading-loose opacity-0 select-none">
-{`pragma circom 2.1.0;
-
-template Multiplier() {
-    signal private input a;
-    signal private input b;
-    signal output c;
-
-    c <== a * b;
-
-    component eq = IsEqual();
-    eq.in[0] <== c;
-    eq.in[1] <== expected;
-    eq.out === 1;
-}
-
-template RangeProof(n) {
-    signal input in;
-    signal input max;
-    signal output out;
-
-    component lt = LessThan(n);
-    lt.in[0] <== in;
-    lt.in[1] <== max;
-    out <== lt.out;
-}`}
-          </pre>
-
-          {/* Overlay message */}
-          <div className="problem-message absolute inset-0 flex items-center justify-center opacity-0">
-            <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
-              Privacy shouldn't<br/>
-              <span className="text-gray-500">require a PhD</span>
-            </h2>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== TRANSFORMATION SECTION ===== */}
-      <section className="section-transformation" style={{ minHeight: '120vh' }}>
-        <div className="sticky top-0 h-screen flex items-center justify-center px-4">
-          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-8 max-w-6xl">
-            {/* JS Panel */}
-            <div className="panel-js code-panel min-w-[280px] lg:min-w-[300px]">
-              <div className="text-xs uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-solana-purple"/>
-                JavaScript
-              </div>
-              <pre className="text-sm text-gray-300 font-mono leading-relaxed">
-{`([expected], [secret]) => {
-  assert(
-    secret * secret == expected
-  );
-}`}
-              </pre>
-            </div>
-
-            {/* Flow Arrow 1 */}
-            <div className="hidden lg:block">
-              <svg className="w-20 h-12" viewBox="0 0 80 48">
-                <path
-                  className="flow-line-1"
-                  d="M0,24 L60,24"
-                  stroke="#9945FF"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <polygon points="55,18 68,24 55,30" fill="#9945FF" opacity="0.8"/>
-              </svg>
-            </div>
-            <div className="lg:hidden">
-              <svg className="w-12 h-16" viewBox="0 0 48 64">
-                <path
-                  className="flow-line-1"
-                  d="M24,0 L24,44"
-                  stroke="#9945FF"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <polygon points="18,40 24,54 30,40" fill="#9945FF" opacity="0.8"/>
-              </svg>
-            </div>
-
-            {/* Noir Panel */}
-            <div className="panel-noir code-panel min-w-[280px] lg:min-w-[300px]">
-              <div className="text-xs uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-noir-orange"/>
-                Noir
-              </div>
-              <pre className="text-sm text-gray-300 font-mono leading-relaxed">
 {`fn main(
     expected: pub Field,
     secret: Field
 ) {
     assert(secret * secret == expected);
+}
+
+fn verify_range(
+    value: Field,
+    min: pub Field,
+    max: pub Field
+) {
+    assert(value >= min);
+    assert(value <= max);
+}
+
+fn verify_membership(
+    leaf: Field,
+    root: pub Field,
+    path: [Field; 32]
+) {
+    let computed = compute_root(leaf, path);
+    assert(computed == root);
 }`}
-              </pre>
-            </div>
+          </pre>
 
-            {/* Flow Arrow 2 */}
-            <div className="hidden lg:block">
-              <svg className="w-20 h-12" viewBox="0 0 80 48">
-                <path
-                  className="flow-line-2"
-                  d="M0,24 L60,24"
-                  stroke="#FF6B35"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <polygon points="55,18 68,24 55,30" fill="#14F195" opacity="0.8"/>
-              </svg>
-            </div>
-            <div className="lg:hidden">
-              <svg className="w-12 h-16" viewBox="0 0 48 64">
-                <path
-                  className="flow-line-2"
-                  d="M24,0 L24,44"
-                  stroke="#FF6B35"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <polygon points="18,40 24,54 30,40" fill="#14F195" opacity="0.8"/>
-              </svg>
-            </div>
+          {/* Overlay message */}
+          <div className="problem-message absolute inset-0 flex items-center justify-center opacity-0 px-4">
+            <h2 className="text-5xl md:text-7xl lg:text-8xl font-bold leading-tight text-center max-w-5xl">
+              What if privacy<br/>
+              <span className="text-gray-500">was this simple?</span>
+            </h2>
+          </div>
+        </div>
+      </section>
 
-            {/* Proof Panel */}
-            <div className="panel-proof code-panel min-w-[280px] lg:min-w-[220px]">
-              <div className="text-xs uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-solana-green"/>
-                Proof
+      {/* ===== WORKFLOW SECTION ===== */}
+      <section className="section-workflow min-h-screen flex items-center justify-center px-4 py-24">
+        <div className="max-w-4xl mx-auto w-full">
+          <h2 className="workflow-title text-5xl md:text-6xl lg:text-7xl font-bold text-center mb-16 opacity-0">
+            How It <span className="text-solana-purple">Works</span>
+          </h2>
+
+          <div className="flex flex-col gap-6">
+            {/* Step 1: INIT */}
+            <div className="workflow-step workflow-step-vertical step-init opacity-0">
+              <div className="step-header">
+                <span className="step-number">1</span>
+                <span className="step-label">Initialize</span>
               </div>
-              <div className="flex flex-col items-center py-6">
-                <span className="text-5xl lg:text-6xl font-bold text-solana-green font-mono">256</span>
-                <span className="text-gray-500 text-sm mt-2">bytes</span>
-                <span className="text-gray-600 text-xs mt-1">Groth16</span>
+              <div className="step-content">
+                <CodeBlock code={`const izi = await IziNoir.init({
+  provider: Provider.Arkworks,
+  chain: Chain.Solana
+});`} />
+                <p className="step-description">Configure provider and target chain</p>
+              </div>
+            </div>
+
+            {/* Step 2: WRITE */}
+            <div className="workflow-step workflow-step-vertical step-write opacity-0">
+              <div className="step-header">
+                <span className="step-number">2</span>
+                <span className="step-label">Write</span>
+              </div>
+              <div className="step-content">
+                <CodeBlock code={`([expected], [secret]) => {
+  assert(secret * secret == expected);
+}`} language="javascript" />
+                <p className="step-description">JavaScript you already know</p>
+              </div>
+            </div>
+
+            {/* Step 3: PROVE */}
+            <div className="workflow-step workflow-step-vertical step-prove opacity-0">
+              <div className="step-header">
+                <span className="step-number">3</span>
+                <span className="step-label">Prove</span>
+              </div>
+              <div className="step-content">
+                <CodeBlock code={`await izi.compile(noirCode);
+const proof = await izi.prove(inputs);
+// proof.size = 256 bytes (Groth16)`} />
+                <p className="step-description">256-byte Groth16 proof</p>
+              </div>
+            </div>
+
+            {/* Step 4: DEPLOY */}
+            <div className="workflow-step workflow-step-vertical step-deploy opacity-0">
+              <div className="step-header">
+                <span className="step-number">4</span>
+                <span className="step-label">Deploy</span>
+              </div>
+              <div className="step-content">
+                <CodeBlock code={`const deployData = izi.getDeployData();
+console.log(izi.vk);  // Verifying key ready`} />
+                <p className="step-description">One-click to Solana</p>
+              </div>
+            </div>
+
+            {/* Step 5: VERIFY */}
+            <div className="workflow-step workflow-step-vertical step-verify opacity-0">
+              <div className="step-header">
+                <span className="step-number">5</span>
+                <span className="step-label">Verify</span>
+              </div>
+              <div className="step-content">
+                <CodeBlock code={`// Off-chain
+const valid = await izi.verify(proof, publicInputs);
+
+// On-chain (Solana)
+const tx = await verifyOnChain(proof, vkAccount);`} />
+                <p className="step-description">On-chain or off-chain</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ===== WORKFLOW SECTION ===== */}
-      <section className="section-workflow flex items-center justify-center px-4 py-16">
+      {/* ===== PIPELINE VISUALIZATIONS - COMPARISON ===== */}
+      <section className="section-pipeline-demos py-24 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="workflow-title text-4xl md:text-5xl lg:text-6xl font-bold text-center mb-12 opacity-0">
-            Complete <span className="text-solana-purple">Workflow</span>
+          <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold text-center mb-8">
+            Under the <span className="text-gray-500">Hood</span>
           </h2>
+          <p className="text-center text-gray-500 mb-16 max-w-2xl mx-auto">
+            JS → Acorn → Noir → Noir WASM → ACIR → Arkworks → R1CS → Groth16 → Proof (256 bytes)
+          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            {/* Step 1: WRITE */}
-            <div className="workflow-step step-write relative opacity-0">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-8 h-8 rounded-full bg-solana-purple/20 flex items-center justify-center text-solana-purple font-bold text-sm">1</span>
-                <span className="text-xs uppercase tracking-widest text-solana-purple">Write</span>
-              </div>
-              <pre className="text-xs text-gray-400 font-mono mb-3 overflow-x-auto">
-{`([min], [balance]) => {
-  assert(balance >= min);
-}`}
-              </pre>
-              <p className="text-gray-500 text-sm">JavaScript you already know</p>
-              {/* Arrow (desktop) */}
-              <div className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-white/20 z-10">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            </div>
-
-            {/* Step 2: PROVE */}
-            <div className="workflow-step step-prove relative opacity-0">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-8 h-8 rounded-full bg-noir-orange/20 flex items-center justify-center text-noir-orange font-bold text-sm">2</span>
-                <span className="text-xs uppercase tracking-widest text-noir-orange">Prove</span>
-              </div>
-              <pre className="text-xs text-gray-400 font-mono mb-3 overflow-x-auto">
-{`const proof = await izi
-  .proveForSolana(inputs);`}
-              </pre>
-              <p className="text-gray-500 text-sm">256-byte Groth16 proof</p>
-              {/* Arrow (desktop) */}
-              <div className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-white/20 z-10">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            </div>
-
-            {/* Step 3: DEPLOY */}
-            <div className="workflow-step step-deploy relative opacity-0">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-8 h-8 rounded-full bg-solana-green/20 flex items-center justify-center text-solana-green font-bold text-sm">3</span>
-                <span className="text-xs uppercase tracking-widest text-solana-green">Deploy</span>
-              </div>
-              <pre className="text-xs text-gray-400 font-mono mb-3 overflow-x-auto">
-{`await manager
-  .ensureDeployed(proof);`}
-              </pre>
-              <p className="text-gray-500 text-sm">One-click to Solana</p>
-              {/* Arrow (desktop) */}
-              <div className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-white/20 z-10">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            </div>
-
-            {/* Step 4: VERIFY */}
-            <div className="workflow-step step-verify opacity-0">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-8 h-8 rounded-full bg-gradient-to-r from-solana-purple/20 to-solana-green/20 flex items-center justify-center font-bold text-sm">
-                  <span className="brand-gradient">4</span>
-                </span>
-                <span className="text-xs uppercase tracking-widest brand-gradient">Verify</span>
-              </div>
-              <pre className="text-xs text-gray-400 font-mono mb-3 overflow-x-auto">
-{`builder.buildVerify
-  ProofInstruction();`}
-              </pre>
-              <p className="text-gray-500 text-sm">On-chain or off-chain</p>
-            </div>
+          {/* Card Stack - drag or click to navigate */}
+          <div className="overflow-hidden">
+            <PipelineCardStack />
           </div>
         </div>
       </section>
@@ -447,7 +361,7 @@ template RangeProof(n) {
               Try the Demo
             </Link>
             <a
-              href="https://github.com/izi-noir/izi-noir"
+              href="https://github.com/francoperez03/izi-noir"
               target="_blank"
               rel="noopener noreferrer"
               className="proof-cta btn-secondary inline-flex items-center justify-center gap-3 opacity-0"
@@ -488,7 +402,7 @@ template RangeProof(n) {
               Solana
             </a>
             <a
-              href="https://github.com/izi-noir/izi-noir"
+              href="https://github.com/francoperez03/izi-noir"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"
