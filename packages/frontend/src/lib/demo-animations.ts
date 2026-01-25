@@ -10,7 +10,7 @@ export function initDemoAnimations() {
     document.querySelectorAll('.demo-hero-title, .demo-hero-subtitle, .demo-section-title').forEach(el => {
       (el as HTMLElement).style.opacity = '1';
     });
-    document.querySelectorAll('.editor-panel, .result-card, .demo-panel').forEach(el => {
+    document.querySelectorAll('.workflow-step-vertical, .result-card, .demo-panel').forEach(el => {
       (el as HTMLElement).style.opacity = '1';
     });
     return;
@@ -48,12 +48,12 @@ function demoHeroAnimation() {
     ease: 'outExpo',
   });
 
-  // Subtitle fade in
+  // Subtitle and commands fade in
   animate('.demo-hero-subtitle', {
     opacity: [0, 1],
     translateY: [20, 0],
     duration: 600,
-    delay: 400,
+    delay: stagger(200, { start: 400 }),
     ease: 'outExpo',
   });
 
@@ -62,7 +62,7 @@ function demoHeroAnimation() {
     opacity: [0, 0.4],
     translateY: [10, 0],
     duration: 400,
-    delay: 800,
+    delay: 1000,
     ease: 'outExpo',
   });
 }
@@ -80,29 +80,19 @@ function initDemoScrollObservers() {
       ease: 'outExpo',
     });
 
-    animate('.editor-panel', {
+    animate('.circuit-explainer', {
       opacity: [0, 1],
       translateY: [20, 0],
-      delay: stagger(150),
       duration: 600,
-      ease: 'outExpo',
-    });
-  });
-
-  // Proof section
-  observeSection('.demo-section-proof', () => {
-    animate('.demo-section-title.proof-title', {
-      opacity: [0, 1],
-      translateY: [30, 0],
-      duration: 800,
+      delay: 100,
       ease: 'outExpo',
     });
 
-    animate('.proof-panel', {
+    animate('.workflow-step-vertical', {
       opacity: [0, 1],
-      scale: [0.95, 1],
+      translateY: [20, 0],
+      delay: stagger(150, { start: 200 }),
       duration: 600,
-      delay: 200,
       ease: 'outExpo',
     });
   });
@@ -116,29 +106,11 @@ function initDemoScrollObservers() {
       ease: 'outExpo',
     });
 
-    animate('.deploy-panel', {
+    animate('.deploy-panel, .verify-panel', {
       opacity: [0, 1],
       translateY: [20, 0],
-      delay: stagger(100),
+      delay: stagger(100, { start: 200 }),
       duration: 600,
-      ease: 'outExpo',
-    });
-  });
-
-  // Verify section
-  observeSection('.demo-section-verify', () => {
-    animate('.demo-section-title.verify-title', {
-      opacity: [0, 1],
-      translateY: [30, 0],
-      duration: 800,
-      ease: 'outExpo',
-    });
-
-    animate('.verify-panel', {
-      opacity: [0, 1],
-      translateY: [20, 0],
-      duration: 600,
-      delay: 200,
       ease: 'outExpo',
     });
   });
@@ -171,6 +143,20 @@ export function animateProofProgress(duration: number = 2000) {
     width: ['0%', '100%'],
     duration,
     ease: 'linear',
+  });
+}
+
+/**
+ * Animate proof results appearing
+ */
+export function animateProofResults() {
+  return animate('.proof-result-card', {
+    opacity: [0, 1],
+    translateY: [10, 0],
+    scale: [0.98, 1],
+    delay: stagger(100),
+    duration: 500,
+    ease: 'outExpo',
   });
 }
 
@@ -253,6 +239,17 @@ export function animateError(selector: string) {
       { to: 0, duration: 50 },
     ],
     ease: 'inOutQuad',
+  });
+}
+
+/**
+ * Animate copy button feedback
+ */
+export function animateCopySuccess(button: HTMLElement) {
+  return animate(button, {
+    scale: [1, 1.1, 1],
+    duration: 300,
+    ease: 'outExpo',
   });
 }
 

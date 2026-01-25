@@ -358,6 +358,98 @@
     @apply min-h-screen;
   }
 
+  /* Terminal card in hero */
+  .terminal-card-hero {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl;
+    @apply bg-black/60 border border-white/10;
+    @apply font-mono text-sm;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .terminal-card-hero:hover {
+    border-color: var(--solana-purple);
+    box-shadow: 0 0 30px rgba(153, 69, 255, 0.15);
+  }
+
+  .terminal-prompt {
+    @apply text-solana-green font-bold;
+  }
+
+  .copy-btn {
+    @apply px-3 py-1 rounded-lg text-xs;
+    @apply bg-white/5 border border-white/10 text-gray-400;
+    @apply hover:bg-white/10 hover:text-white transition-all duration-200;
+  }
+
+  .copy-btn.copied {
+    @apply bg-solana-green/20 border-solana-green/30 text-solana-green;
+  }
+
+  /* Circuit Explainer */
+  .circuit-explainer {
+    @apply text-center p-6 rounded-2xl bg-white/[0.02] border border-white/5;
+  }
+
+  .explainer-main {
+    @apply text-lg text-gray-300;
+  }
+
+  .explainer-formula {
+    @apply text-2xl font-mono font-bold;
+  }
+
+  /* Noir Toggle */
+  .noir-toggle {
+    @apply flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300;
+    @apply mt-4 px-4 py-2 rounded-lg hover:bg-white/5;
+    @apply transition-all duration-200 cursor-pointer;
+  }
+
+  .noir-toggle svg {
+    @apply w-4 h-4 transition-transform duration-200;
+  }
+
+  .noir-toggle.open svg {
+    transform: rotate(180deg);
+  }
+
+  .noir-preview {
+    @apply overflow-hidden;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; max-height: 0; }
+    to { opacity: 1; max-height: 500px; }
+  }
+
+  /* Validation Box */
+  .validation-box {
+    @apply p-4 rounded-xl text-center font-mono text-sm;
+    transition: all 0.3s ease;
+  }
+
+  .validation-box.valid {
+    @apply bg-solana-green/10 border border-solana-green/30 text-solana-green;
+  }
+
+  .validation-box.invalid {
+    @apply bg-yellow-500/10 border border-yellow-500/30 text-yellow-500;
+  }
+
+  /* Grid equal height cards */
+  .demo-section-editor .grid {
+    @apply items-stretch;
+  }
+
+  .demo-section-editor .workflow-step-vertical {
+    @apply flex flex-col;
+  }
+
+  .demo-section-editor .workflow-step-vertical .step-content {
+    @apply flex-1;
+  }
+
   /* Editor panel - code editor look */
   .editor-panel {
     @apply rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md overflow-hidden;
@@ -401,6 +493,34 @@
     @apply w-full bg-transparent text-gray-300 font-mono text-sm resize-none;
     @apply focus:outline-none;
     line-height: 1.6;
+  }
+
+  /* Editable code block with syntax highlighting */
+  .editable-code-block {
+    @apply relative w-full;
+    min-height: 140px;
+  }
+
+  .editable-code-block .code-highlight-overlay {
+    @apply absolute inset-0 pointer-events-none overflow-hidden;
+    @apply font-mono text-sm p-0 m-0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .editable-code-block .code-textarea-input {
+    @apply w-full h-full bg-transparent text-transparent font-mono text-sm resize-none;
+    @apply focus:outline-none;
+    @apply absolute inset-0;
+    caret-color: #fff;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .editable-code-block .code-textarea-input::selection {
+    background: rgba(153, 69, 255, 0.3);
   }
 
   /* Input fields */
@@ -549,6 +669,18 @@
     @apply bg-solana-green/10 border border-solana-green/30 text-solana-green;
     @apply font-semibold text-lg;
   }
+
+  /* Verify dots animation */
+  .verify-dots::after {
+    content: '.';
+    animation: verify-dots 1.5s infinite;
+  }
+}
+
+@keyframes verify-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
 }
 
 /* Accessibility - reduced motion */
