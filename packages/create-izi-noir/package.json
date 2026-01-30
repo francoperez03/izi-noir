@@ -1,6 +1,6 @@
 {
   "name": "create-izi-noir",
-  "version": "0.1.0",
+  "version": "0.2.6",
   "description": "CLI to scaffold IZI-NOIR ZK projects",
   "type": "module",
   "bin": {

@@ -1,23 +1,34 @@
 export function generateTsconfig(): string {
   const config = {
     compilerOptions: {
-      target: 'ES2022',
+      target: 'ES2020',
+      useDefineForClassFields: true,
+      lib: ['ES2020', 'DOM', 'DOM.Iterable'],
       module: 'ESNext',
-      moduleResolution: 'bundler',
-      lib: ['ES2022'],
-      outDir: './dist',
-      rootDir: '.',
-      strict: true,
-      esModuleInterop: true,
       skipLibCheck: true,
-      forceConsistentCasingInFileNames: true,
-      declaration: true,
-      declarationMap: true,
-      sourceMap: true,
-      resolveJsonModule: true,
+
+      // Bundler mode
+      moduleResolution: 'bundler',
+      allowImportingTsExtensions: true,
+      isolatedModules: true,
+      moduleDetection: 'force',
+      noEmit: true,
+      jsx: 'react-jsx',
+
+      // Linting
+      strict: true,
+      noUnusedLocals: true,
+      noUnusedParameters: true,
+      noFallthroughCasesInSwitch: true,
+
+      // Paths
+      baseUrl: '.',
+      paths: {
+        '@/*': ['./src/*'],
+      },
     },
-    include: ['circuits/**/*', 'generated/**/*', 'scripts/**/*'],
-    exclude: ['node_modules', 'dist'],
+    include: ['src', 'circuits'],
+    references: [{ path: './tsconfig.node.json' }],
   };
 
   return JSON.stringify(config, null, 2);

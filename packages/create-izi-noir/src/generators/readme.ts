@@ -1,36 +1,50 @@
 import type { ProjectOptions } from '../prompts/project.js';
 
 export function generateReadme(options: ProjectOptions): string {
+  const isSolana = options.provider === 'arkworks';
+  const networkInfo = isSolana
+    ? '- Deploy VK to Solana devnet\n- Verify proofs on-chain'
+    : '- Local proof verification';
+
   return `# ${options.projectName}
 
-ZK circuits built with [IZI-NOIR](https://github.com/izi-noir/izi-noir).
+ZK proof demo built with [IZI-NOIR](https://github.com/izi-noir/izi-noir) and React.
 
 ## Getting Started
 
 \`\`\`bash
-# Build circuits
-npm run build
+# Install dependencies
+npm install
 
-# Run tests
-npm test
-
-# Watch mode (rebuild on changes)
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 \`\`\`
+
+Then open http://localhost:5173 in your browser.
+
+## Features
+
+- Interactive circuit selection
+- Real-time proof generation
+- Syntax-highlighted code display
+${networkInfo}
 
 ## Project Structure
 
 \`\`\`
 ${options.projectName}/
-├── circuits/           # Your ZK circuit definitions
-│   ├── *.ts           # Circuits as JS functions with assert()
-│   └── index.ts       # Re-exports
-├── generated/          # Compiled circuits (auto-generated)
-│   ├── *.json         # Compiled circuit artifacts
-│   └── index.ts       # Typed re-exports
-├── scripts/
-│   └── test-proof.ts  # Local test script
-├── izi-noir.config.ts # Build configuration
+├── src/
+│   ├── App.tsx          # Main demo component
+│   ├── main.tsx         # React entry point
+│   ├── components/      # Reusable components
+│   └── lib/             # Utility functions
+├── circuits/            # Your ZK circuit definitions
+│   ├── *.ts            # Circuits as JS functions with assert()
+│   └── index.ts        # Re-exports
+├── vite.config.ts       # Vite configuration
 └── package.json
 \`\`\`
 
@@ -48,34 +62,15 @@ export function myCircuit(
 }
 \`\`\`
 
-## Usage in Frontend
-
-\`\`\`typescript
-import { IziNoir, Provider } from '@izi-noir/sdk';
-import { myCircuit } from '${options.projectName}/circuits';
-
-const izi = await IziNoir.init({ provider: Provider.Arkworks });
-
-const proof = await izi.createProof(
-  myCircuit,
-  [100],    // public inputs
-  [1500]    // private inputs (hidden)
-);
-
-console.log(proof.verified); // true
-\`\`\`
-
-## Publishing
-
-\`\`\`bash
-npm publish
-\`\`\`
-
-Your circuits can then be installed as a dependency in other projects.
+After adding a new circuit:
+1. Export it from \`circuits/index.ts\`
+2. Add it to the CIRCUITS array in \`src/App.tsx\`
 
 ## Learn More
 
 - [IZI-NOIR Documentation](https://github.com/izi-noir/izi-noir)
 - [Noir Language](https://noir-lang.org)
+- [Vite](https://vitejs.dev)
+- [React](https://react.dev)
 `;
 }

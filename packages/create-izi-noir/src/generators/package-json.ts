@@ -1,40 +1,48 @@
 import type { ProjectOptions } from '../prompts/project.js';
 
 export function generatePackageJson(options: ProjectOptions): string {
+  const isSolana = options.provider === 'arkworks';
+
+  const dependencies: Record<string, string> = {
+    '@izi-noir/sdk': '^0.1.5',
+    '@noir-lang/acvm_js': '1.0.0-beta.13-1d260df.nightly',
+    '@noir-lang/noirc_abi': '1.0.0-beta.13-1d260df.nightly',
+    'react': '^18.3.1',
+    'react-dom': '^18.3.1',
+    'prism-react-renderer': '^2.4.1',
+    'buffer': '^6.0.3',
+    'util': '^0.12.5',
+  };
+
+  // Add Solana wallet adapter dependencies
+  if (isSolana) {
+    dependencies['@solana/wallet-adapter-react'] = '^0.15.0';
+    dependencies['@solana/wallet-adapter-react-ui'] = '^0.9.0';
+    dependencies['@solana/wallet-adapter-wallets'] = '^0.19.0';
+    dependencies['@solana/web3.js'] = '^1.95.0';
+  }
+
   const pkg = {
     name: options.projectName,
     version: '0.1.0',
+    private: true,
     description: 'ZK circuits built with IZI-NOIR',
     type: 'module',
-    main: './dist/index.js',
-    types: './dist/index.d.ts',
-    exports: {
-      '.': {
-        types: './dist/index.d.ts',
-        import: './dist/index.js',
-      },
-      './circuits': {
-        types: './circuits/index.d.ts',
-        import: './circuits/index.js',
-      },
-    },
-    files: ['dist', 'circuits', 'generated'],
     scripts: {
-      build: 'izi-noir build && tsc',
-      'build:circuits': 'izi-noir build',
-      dev: 'izi-noir build --watch',
-      test: 'tsx scripts/test-proof.ts',
-      prepublishOnly: 'npm run build',
+      dev: 'vite',
+      build: 'vite build',
+      preview: 'vite preview',
+      typecheck: 'tsc --noEmit',
     },
-    dependencies: {
-      '@izi-noir/sdk': '^0.1.0',
-    },
+    dependencies,
     devDependencies: {
-      '@types/node': '^22.0.0',
-      tsx: '^4.0.0',
-      typescript: '^5.4.0',
+      '@types/react': '^18.3.0',
+      '@types/react-dom': '^18.3.0',
+      '@vitejs/plugin-react': '^4.3.0',
+      'typescript': '^5.4.0',
+      'vite': '^5.4.0',
     },
-    keywords: ['zk', 'noir', 'zero-knowledge', 'privacy', 'solana'],
+    keywords: ['zk', 'noir', 'zero-knowledge', 'privacy', isSolana ? 'solana' : 'evm'],
     license: 'MIT',
   };
 

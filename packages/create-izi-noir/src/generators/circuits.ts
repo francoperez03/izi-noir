@@ -72,3 +72,18 @@ export { ageProof } from './age-proof.js';
 `;
   }
 }
+
+export function generateCircuitTypes(): string {
+  return `/**
+ * Global type declarations for IZI-NOIR circuits
+ */
+
+/**
+ * Assert a condition that must be true for the proof to be valid.
+ * This is the core primitive for defining ZK constraints.
+ *
+ * @param condition - The boolean condition to assert
+ */
+declare function assert(condition: boolean): void;
+`;
+}

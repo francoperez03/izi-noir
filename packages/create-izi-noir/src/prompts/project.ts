@@ -7,6 +7,7 @@ export interface ProjectOptions {
   provider: string;
   skipInstall: boolean;
   skipGit: boolean;
+  aiTool: 'claude' | 'none';
 }
 
 const TEMPLATES = [
@@ -15,10 +16,14 @@ const TEMPLATES = [
   { title: 'Balance Proof only', value: 'balance-proof' },
 ];
 
-const PROVIDERS = [
-  { title: 'Arkworks (recommended)', value: 'arkworks' },
-  { title: 'Barretenberg', value: 'barretenberg' },
+const NETWORKS = [
+  { title: 'Solana', value: 'solana', description: 'Uses Groth16 for on-chain verification' },
 ];
+
+// Map network to provider internally
+function networkToProvider(network: string): string {
+  return network === 'solana' ? 'arkworks' : 'barretenberg';
+}
 
 export async function promptProjectOptions(
   defaults: Partial<ProjectOptions>
@@ -55,10 +60,10 @@ export async function promptProjectOptions(
     },
     {
       type: 'select',
-      name: 'provider',
-      message: 'Select proving provider:',
-      choices: PROVIDERS,
-      initial: PROVIDERS.findIndex((p) => p.value === defaults.provider) || 0,
+      name: 'network',
+      message: 'Where will you verify proofs?',
+      choices: NETWORKS,
+      initial: 0,
     },
     {
       type: 'confirm',
@@ -71,6 +76,16 @@ export async function promptProjectOptions(
       name: 'initGit',
       message: 'Initialize git repository?',
       initial: !defaults.skipGit,
+    },
+    {
+      type: 'select',
+      name: 'aiTool',
+      message: 'Which AI coding assistant do you use?',
+      choices: [
+        { title: 'Claude Code', value: 'claude', description: 'Install IZI-NOIR circuit patterns skill' },
+        { title: 'None / Other', value: 'none', description: 'Skip AI assistant configuration' },
+      ],
+      initial: 0,
     }
   );
 
@@ -81,12 +96,14 @@ export async function promptProjectOptions(
       },
     });
 
+    const network = response.network || 'solana';
     return {
       projectName: defaults.projectName || response.projectName,
       template: response.template || defaults.template || 'default',
-      provider: response.provider || defaults.provider || 'arkworks',
+      provider: networkToProvider(network),
       skipInstall: response.installDeps === false,
       skipGit: response.initGit === false,
+      aiTool: response.aiTool || 'none',
     };
   } catch {
     return null;
