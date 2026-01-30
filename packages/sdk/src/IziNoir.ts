@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import {
   Provider,
   Chain,
@@ -11,10 +12,14 @@ import type {
   ProofData,
   SolanaProofData,
   VerifyingKeyData,
+  CompileResult,
 } from './domain/types.js';
 import type { IChainFormatter } from './domain/interfaces/chain/IChainFormatter.js';
 import type { ChainId, CircuitMetadata } from './domain/types/chain.js';
 import { initNoirWasm } from './infra/wasm/wasmInit.js';
+import { Network, NETWORK_CONFIG, getExplorerTxUrl, getExplorerAccountUrl } from './solana/config.js';
+import type { WalletAdapter, DeployResult, VerifyOnChainResult } from './solana/types.js';
+import { SolanaTransactionBuilder } from './solana/TransactionBuilder.js';
 
 /**
  * Data needed to deploy a verifying key to Solana.
@@ -59,18 +64,36 @@ export class IziNoir {
   private readonly chain?: Chain;
   private _verifyingKey?: VerifyingKeyData;
   private _lastProof?: SolanaProofData | ProofData;
+  private readonly _network: Network;
+  private _vkAccount?: string;
 
-  private constructor(provingSystem: IProvingSystem, chain?: Chain) {
+  private constructor(provingSystem: IProvingSystem, chain?: Chain, network?: Network) {
     this.provingSystem = provingSystem;
     this.chain = chain;
+    this._network = network ?? Network.Devnet;
   }
 
   /**
-   * Get the verifying key from the last proof generation.
-   * Only available after calling prove() with a chain configured.
+   * Get the verifying key.
+   * Available after calling compile() (for Arkworks/Sunspot providers with chain configured).
    */
   get vk(): VerifyingKeyData | undefined {
     return this._verifyingKey;
+  }
+
+  /**
+   * Get the deployed VK account address.
+   * Only available after calling deploy().
+   */
+  get vkAccount(): string | undefined {
+    return this._vkAccount;
+  }
+
+  /**
+   * Get the configured network.
+   */
+  get network(): Network {
+    return this._network;
   }
 
   /**
@@ -152,7 +175,7 @@ export class IziNoir {
         const arkworksInstance = new ArkworksWasm();
         provingSystem = arkworksInstance;
 
-        const instance = new IziNoir(provingSystem, config.chain);
+        const instance = new IziNoir(provingSystem, config.chain, config.network);
 
         // Auto-register SolanaFormatter if chain is Solana or for backwards compatibility
         if (config.chain === Chain.Solana || !config.chain) {
@@ -190,20 +213,70 @@ export class IziNoir {
 
   /**
    * Compile Noir code into a circuit.
+   * Performs trusted setup (generates PK and VK) during compilation.
+   * After compile(), the verifying key is available via `this.vk`.
    *
    * @param noirCode - The Noir source code to compile
-   * @returns The compiled circuit
+   * @returns CompileResult with circuit and verifying key
+   *
+   * @example
+   * ```typescript
+   * const { circuit, verifyingKey } = await izi.compile(noirCode);
+   * console.log('VK:', izi.vk);  // Available immediately after compile
+   * ```
    */
-  async compile(noirCode: string): Promise<CompiledCircuit> {
+  async compile(noirCode: string): Promise<CompileResult> {
     this.compiledCircuit = await this.provingSystem.compile(noirCode);
-    return this.compiledCircuit;
+
+    // Extract VK from compiled circuit if available (Arkworks does setup during compile)
+    const vk = await this.extractVerifyingKey(this.compiledCircuit);
+    if (vk) {
+      this._verifyingKey = vk;
+    }
+
+    return {
+      circuit: this.compiledCircuit,
+      verifyingKey: this._verifyingKey!,
+    };
+  }
+
+  /**
+   * Extract verifying key from compiled circuit.
+   * Works for Arkworks circuits that have VK cached after setup.
+   */
+  private async extractVerifyingKey(circuit: CompiledCircuit): Promise<VerifyingKeyData | undefined> {
+    // Check if it's an Arkworks circuit with cached VK
+    if ('__arkworks' in circuit && (circuit as any).__arkworks === true) {
+      const arkworksCircuit = circuit as any;
+      if (arkworksCircuit.verifyingKeyGnark) {
+        // Convert base64 to Uint8Array
+        const binaryString = atob(arkworksCircuit.verifyingKeyGnark);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Count public inputs from ABI
+        const nrPublicInputs = circuit.abi.parameters.filter(
+          (p: any) => p.visibility === 'public'
+        ).length;
+
+        return {
+          base64: arkworksCircuit.verifyingKeyGnark,
+          bytes,
+          nrPublicInputs,
+        };
+      }
+    }
+    return undefined;
   }
 
   /**
    * Generate a proof for the given inputs.
+   * Uses the cached proving key from compile() for fast proof generation.
    *
-   * If a chain is configured, returns chain-formatted proof data and stores
-   * the verifying key in `this.vk`. Otherwise, returns raw proof data.
+   * If a chain is configured, returns chain-formatted proof data.
+   * Otherwise, returns raw proof data.
    *
    * @param inputs - The inputs (both public and private) for the circuit
    * @param circuit - Optional circuit to use (defaults to last compiled circuit)
@@ -214,15 +287,13 @@ export class IziNoir {
    * ```typescript
    * // With chain configured - returns SolanaProofData
    * const izi = await IziNoir.init({ provider: Provider.Arkworks, chain: Chain.Solana });
-   * await izi.compile(noirCode);
+   * await izi.compile(noirCode);  // VK available after compile
    * const proof = await izi.prove({ expected: '100', secret: '10' });
-   * // proof is SolanaProofData, izi.vk is available
    *
    * // Offchain mode - returns ProofData
    * const iziOffchain = await IziNoir.init({ provider: Provider.Arkworks });
    * await iziOffchain.compile(noirCode);
    * const rawProof = await iziOffchain.prove({ expected: '100', secret: '10' });
-   * // rawProof is ProofData, iziOffchain.vk is undefined
    * ```
    */
   async prove(inputs: InputMap, circuit?: CompiledCircuit): Promise<ProofData | SolanaProofData> {
@@ -258,8 +329,6 @@ export class IziNoir {
     const formattedProof = await formatter.formatProof(rawProof, circuitToUse, metadata);
     const chainProof = formattedProof as unknown as SolanaProofData;
 
-    // Store VK on instance
-    this._verifyingKey = chainProof.verifyingKey;
     this._lastProof = chainProof;
 
     return chainProof;
@@ -307,7 +376,7 @@ export class IziNoir {
     noirCode: string,
     inputs: InputMap
   ): Promise<{ proof: ProofData | SolanaProofData; verified: boolean }> {
-    const circuit = await this.compile(noirCode);
+    const { circuit } = await this.compile(noirCode);
     const proof = await this.prove(inputs, circuit);
 
     // For verification, extract raw proof bytes
@@ -371,11 +440,222 @@ export class IziNoir {
       computeUnits: options?.computeUnits ?? 400_000,
     };
   }
+
+  /**
+   * Deploy the verifying key to Solana.
+   *
+   * This method handles the full deployment flow:
+   * 1. Generates a keypair for the VK account
+   * 2. Builds the init transaction
+   * 3. Sends and confirms the transaction
+   * 4. Stores the VK account address on the instance
+   *
+   * @param wallet - Wallet adapter with publicKey and sendTransaction
+   * @returns Deploy result with VK account address and transaction signature
+   * @throws Error if not in Solana chain mode or prove() hasn't been called
+   *
+   * @example
+   * ```typescript
+   * const izi = await IziNoir.init({
+   *   provider: Provider.Arkworks,
+   *   chain: Chain.Solana,
+   *   network: Network.Devnet
+   * });
+   *
+   * await izi.compile(noirCode);
+   * await izi.prove(inputs);
+   *
+   * // Deploy VK in one line
+   * const { vkAccount, signature } = await izi.deploy(wallet);
+   * console.log(`VK deployed at: ${vkAccount}`);
+   * ```
+   */
+  async deploy(wallet: WalletAdapter): Promise<DeployResult> {
+    if (this.chain !== Chain.Solana) {
+      throw new Error('deploy() requires Chain.Solana. Initialize with { chain: Chain.Solana }');
+    }
+
+    if (!this._lastProof || !this._verifyingKey) {
+      throw new Error('Must call prove() before deploy()');
+    }
+
+    if (!wallet.publicKey) {
+      throw new Error('Wallet not connected');
+    }
+
+    const proofData = this._lastProof as SolanaProofData;
+    const networkConfig = NETWORK_CONFIG[this._network];
+
+    // Dynamic import of @solana/web3.js to avoid bundling issues
+    const { Connection, Keypair, Transaction, PublicKey } = await import('@solana/web3.js');
+
+    const connection = new Connection(networkConfig.rpcUrl, 'confirmed');
+    const vkKeypair = Keypair.generate();
+    const authority = wallet.publicKey;
+
+    // Build transaction using SolanaTransactionBuilder
+    const builder = new SolanaTransactionBuilder({
+      programId: networkConfig.programId,
+      computeUnits: 400_000,
+    });
+
+    const { initVk, computeBudget } = builder.buildInitAndVerifyInstructions(
+      proofData,
+      vkKeypair.publicKey.toBase58(),
+      authority.toBase58(),
+      authority.toBase58()
+    );
+
+    // Convert InstructionData to TransactionInstruction
+    const toInstruction = (data: { programId: string; keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>; data: Uint8Array }) => {
+      return {
+        programId: new PublicKey(data.programId),
+        keys: data.keys.map((k) => ({
+          pubkey: new PublicKey(k.pubkey),
+          isSigner: k.isSigner,
+          isWritable: k.isWritable,
+        })),
+        data: Buffer.from(data.data),
+      };
+    };
+
+    // Create transaction
+    const tx = new Transaction();
+    if (computeBudget) {
+      tx.add(toInstruction(computeBudget));
+    }
+    tx.add(toInstruction(initVk));
+
+    // Set transaction properties
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = authority as unknown as typeof vkKeypair.publicKey;
+
+    // Partial sign with VK keypair
+    tx.partialSign(vkKeypair);
+
+    // Send transaction through wallet
+    const signature = await wallet.sendTransaction(tx, connection);
+
+    // Confirm transaction
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    });
+
+    // Store VK account on instance
+    this._vkAccount = vkKeypair.publicKey.toBase58();
+
+    return {
+      vkAccount: this._vkAccount,
+      signature,
+      explorerUrl: getExplorerTxUrl(this._network, signature),
+    };
+  }
+
+  /**
+   * Verify the proof on-chain.
+   *
+   * @param wallet - Wallet adapter with publicKey and sendTransaction
+   * @param vkAccount - VK account address (optional if deploy() was called on this instance)
+   * @returns Verification result with transaction signature
+   * @throws Error if not in Solana chain mode or no VK account available
+   *
+   * @example
+   * ```typescript
+   * // After deploy()
+   * const { verified, signature } = await izi.verifyOnChain(wallet);
+   *
+   * // Or with explicit VK account
+   * const { verified } = await izi.verifyOnChain(wallet, 'VkAccountAddress...');
+   * ```
+   */
+  async verifyOnChain(wallet: WalletAdapter, vkAccount?: string): Promise<VerifyOnChainResult> {
+    if (this.chain !== Chain.Solana) {
+      throw new Error('verifyOnChain() requires Chain.Solana');
+    }
+
+    if (!this._lastProof) {
+      throw new Error('Must call prove() before verifyOnChain()');
+    }
+
+    const vk = vkAccount ?? this._vkAccount;
+    if (!vk) {
+      throw new Error('No VK account. Call deploy() first or provide vkAccount parameter');
+    }
+
+    if (!wallet.publicKey) {
+      throw new Error('Wallet not connected');
+    }
+
+    const proofData = this._lastProof as SolanaProofData;
+    const networkConfig = NETWORK_CONFIG[this._network];
+
+    // Dynamic import
+    const { Connection, Transaction, PublicKey } = await import('@solana/web3.js');
+
+    const connection = new Connection(networkConfig.rpcUrl, 'confirmed');
+
+    // Build verify instruction
+    const builder = new SolanaTransactionBuilder({
+      programId: networkConfig.programId,
+      computeUnits: 400_000,
+    });
+
+    const verifyInstruction = builder.buildVerifyProofInstruction(
+      proofData.proof.bytes,
+      proofData.publicInputs.bytes,
+      { vkAccount: vk }
+    );
+
+    const computeBudget = builder.buildSetComputeUnitLimitInstruction();
+
+    // Convert to TransactionInstruction
+    const toInstruction = (data: { programId: string; keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>; data: Uint8Array }) => {
+      return {
+        programId: new PublicKey(data.programId),
+        keys: data.keys.map((k) => ({
+          pubkey: new PublicKey(k.pubkey),
+          isSigner: k.isSigner,
+          isWritable: k.isWritable,
+        })),
+        data: Buffer.from(data.data),
+      };
+    };
+
+    // Create transaction
+    const tx = new Transaction();
+    tx.add(toInstruction(computeBudget));
+    tx.add(toInstruction(verifyInstruction));
+
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = new PublicKey(wallet.publicKey.toBase58());
+
+    // Send transaction
+    const signature = await wallet.sendTransaction(tx, connection);
+
+    // Confirm transaction
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    });
+
+    return {
+      verified: true,
+      signature,
+      explorerUrl: getExplorerTxUrl(this._network, signature),
+    };
+  }
 }
 
-// Re-export Provider, Chain and types for convenience
+// Re-export Provider, Chain, Network and types for convenience
 export { Provider, Chain, type IziNoirConfig, type CircuitPaths };
-export type { SolanaProofData, VerifyingKeyData } from './domain/types.js';
+export { Network } from './solana/config.js';
+export type { WalletAdapter, DeployResult, VerifyOnChainResult } from './solana/types.js';
+export type { SolanaProofData, VerifyingKeyData, CompileResult } from './domain/types.js';
 export type {
   ChainId,
   CircuitMetadata,

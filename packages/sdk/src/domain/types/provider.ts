@@ -1,4 +1,5 @@
 import { Chain } from './chain.js';
+import { Network } from '../../solana/config.js';
 
 /**
  * Available proving system providers
@@ -35,9 +36,16 @@ export interface IziNoirConfig {
    * If omitted, operates in offchain mode (raw proofs, no chain formatting).
    */
   chain?: Chain;
+  /**
+   * Solana network for deploy/verify operations.
+   * Only used when chain is Chain.Solana.
+   * Default: Network.Devnet
+   */
+  network?: Network;
   /** Circuit paths - required for Sunspot provider */
   circuitPaths?: CircuitPaths;
 }
 
-// Re-export Chain for convenience
+// Re-export Chain and Network for convenience
 export { Chain };
+export { Network };

@@ -102,6 +102,10 @@ function generateExpr(expr: Expr): string {
     case 'binary': {
       const left = generateExpr(expr.left);
       const right = generateExpr(expr.right);
+      // Comparison operators need casting to u64 in Noir (Fields can't be compared directly)
+      if (['>=', '<=', '>', '<'].includes(expr.operator)) {
+        return `(${left} as u64) ${expr.operator} (${right} as u64)`;
+      }
       return `${left} ${expr.operator} ${right}`;
     }
 

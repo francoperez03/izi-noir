@@ -177,8 +177,24 @@ let wasmModule: ArkworksWasmModule | null = null;
 let wasmInitPromise: Promise<ArkworksWasmModule> | null = null;
 
 /**
+ * Get paths for Node.js WASM loading
+ * Returns both the JS loader path and the WASM binary path
+ */
+async function getWasmPaths(): Promise<{ loaderPath: string; wasmPath: string }> {
+  const url = await import('node:url');
+  const path = await import('node:path');
+  // Resolve relative to this file's location in dist/
+  const dirname = path.dirname(url.fileURLToPath(import.meta.url));
+  return {
+    loaderPath: path.join(dirname, 'wasm', 'web', 'arkworks_groth16_wasm.js'),
+    wasmPath: path.join(dirname, 'wasm', 'web', 'arkworks_groth16_wasm_bg.wasm'),
+  };
+}
+
+/**
  * Initialize the arkworks WASM module
- * Automatically detects Node.js vs browser and uses the appropriate WASM target.
+ * Uses the web target for both Node.js and browser.
+ * The web target produces ESM which works in both environments.
  */
 async function initWasm(): Promise<ArkworksWasmModule> {
   if (wasmModule) {
@@ -192,22 +208,40 @@ async function initWasm(): Promise<ArkworksWasmModule> {
   wasmInitPromise = (async () => {
     try {
       if (isNodeJs()) {
-        // Node.js: use the nodejs target which doesn't require fetch
-        // Path resolves to dist/wasm/nodejs/ after bundling
-        // @ts-ignore - Dynamic import path resolved at runtime
-        const module = await import('../wasm/nodejs/arkworks_groth16_wasm.js');
+        // Node.js: dynamically construct import path and load WASM from file system
+        const fs = await import('node:fs/promises');
+        const { loaderPath, wasmPath } = await getWasmPaths();
+
+        // Use pathToFileURL to create a proper file:// URL for dynamic import
+        const url = await import('node:url');
+        const loaderUrl = url.pathToFileURL(loaderPath).href;
+
+        // Dynamic import of the JS loader
+        // @ts-ignore - Dynamic import with URL (Node.js only)
+        const module = await import(/* @vite-ignore */ loaderUrl);
+
+        // Load WASM binary and initialize
+        const wasmBytes = await fs.readFile(wasmPath);
+        await module.default(wasmBytes);
+
         wasmModule = module as unknown as ArkworksWasmModule;
       } else {
-        // Browser: use the web target with init function
-        // Path resolves to dist/wasm/web/ after bundling
-        // @ts-ignore - Dynamic import path resolved at runtime
-        const module = await import('../wasm/web/arkworks_groth16_wasm.js');
-        // Initialize WASM (wasm-pack generates an init function for web target)
-        if (typeof module.default === 'function') {
-          await module.default();
-        }
+        // Browser: construct URL based on this module's location
+        // Detect if running from source or bundled dist to use correct relative path
+        const moduleUrl = new URL(import.meta.url);
+        const isSourceFile = moduleUrl.pathname.includes('/src/');
+        // From source: src/infra/provingSystems/ -> src/wasm/web/ (2 levels up)
+        // From dist: dist/ -> dist/wasm/web/ (same level)
+        const wasmRelativePath = isSourceFile
+          ? '../../wasm/web/arkworks_groth16_wasm.js'
+          : './wasm/web/arkworks_groth16_wasm.js';
+        const wasmJsUrl = new URL(wasmRelativePath, moduleUrl);
+        // @ts-ignore - Dynamic import with URL
+        const module = await import(/* @vite-ignore */ wasmJsUrl.href);
+        await module.default();
         wasmModule = module as unknown as ArkworksWasmModule;
       }
+
       return wasmModule;
     } catch (error) {
       wasmInitPromise = null;

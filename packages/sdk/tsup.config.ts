@@ -17,11 +17,10 @@ export default defineConfig({
     },
   },
   splitting: false,
-  sourcemap: true,
   clean: true,
   minify: false,
   // Don't bundle Noir WASM modules - they have different entry points for web/nodejs
-  // Local WASM loaders are bundled inline
+  // Also externalize our local WASM loaders (they get copied to dist/wasm/)
   external: [
     "@noir-lang/acvm_js",
     "@noir-lang/acvm_js/nodejs/acvm_js.js",
@@ -30,6 +29,9 @@ export default defineConfig({
     "@noir-lang/noir_wasm",
     "@noir-lang/noir_js",
     "@noir-lang/types",
+    "@solana/web3.js",
+    /\.\/wasm\//,
+    /\.\.\/wasm\//,
   ],
   // Copy WASM binary files to dist (they're loaded by the bundled JS loaders)
   async onSuccess() {

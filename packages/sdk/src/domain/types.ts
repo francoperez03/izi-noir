@@ -47,11 +47,24 @@ export interface VerifierOptions {
   verbose?: boolean;
 }
 
+// ========== Compilation Result Types ==========
+
+/**
+ * Result of compiling a circuit.
+ * Contains the compiled circuit and verifying key generated during trusted setup.
+ */
+export interface CompileResult {
+  /** The compiled circuit (includes cached PK/VK) */
+  circuit: CompiledCircuit;
+  /** Verifying key generated during trusted setup */
+  verifyingKey: VerifyingKeyData;
+}
+
 // ========== Solana On-Chain Verification Types ==========
 
 /**
  * Verifying key data for on-chain verification.
- * Stored on the IziNoir instance after prove() is called.
+ * Stored on the IziNoir instance after compile() is called.
  */
 export interface VerifyingKeyData {
   /** Base64-encoded VK in gnark format */

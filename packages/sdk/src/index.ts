@@ -6,9 +6,13 @@ export {
   IziNoir,
   Provider,
   Chain,
+  Network,
   type IziNoirConfig,
   type CircuitPaths,
   type SolanaDeployData,
+  type WalletAdapter,
+  type DeployResult,
+  type VerifyOnChainResult,
 } from './IziNoir.js';
 
 // Chain formatting types
@@ -123,6 +127,14 @@ export type {
   InitAndVerifyInstructions,
 } from './solana/TransactionBuilder.js';
 
+// Network configuration utilities
+export {
+  NETWORK_CONFIG,
+  getExplorerTxUrl,
+  getExplorerAccountUrl,
+  type NetworkConfig,
+} from './solana/config.js';
+
 // Solana proof data helpers (from providers/solana.ts)
 export {
   IZI_NOIR_PROGRAM_ID,
@@ -134,7 +146,7 @@ export {
   buildInitVkFromBytesData,
   buildVerifyProofData,
 } from './providers/solana.js';
-export type { SolanaProofData } from './domain/types.js';
+export type { SolanaProofData, CompileResult } from './domain/types.js';
 
 // VK Deployment Manager
 export {
