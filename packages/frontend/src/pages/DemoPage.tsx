@@ -9,10 +9,13 @@ import {
   IziNoir,
   Provider,
   Chain,
+  Network,
   markWasmInitialized,
   AcornParser,
   generateNoir,
   type SolanaProofData,
+  getExplorerTxUrl,
+  getExplorerAccountUrl
 } from '@izi-noir/sdk';
 import {
   initDemoAnimations,
@@ -24,7 +27,8 @@ import {
   animateProofResults,
   animateCopySuccess,
 } from '../lib/demo-animations';
-import { useSolanaDemo } from '../hooks/useSolanaDemo';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { CodeBlock } from '../components/CodeBlock';
 import { EditableCodeBlock } from '../components/EditableCodeBlock';
 
@@ -97,16 +101,10 @@ export function DemoPage() {
 
   // Wallet & Solana
   const { setVisible } = useWalletModal();
-  const {
-    connected,
-    publicKey,
-    balance,
-    fetchBalance,
-    deploy,
-    verify,
-    getExplorerUrl,
-    getAccountExplorerUrl,
-  } = useSolanaDemo();
+  const { connection } = useConnection();
+  const { publicKey, connected, sendTransaction } = useWallet();
+  const [balance, setBalance] = useState<number | null>(null);
+  const [iziInstance, setIziInstance] = useState<IziNoir | null>(null);
 
   // Computed: inputs validation
   const inputsValid = privateInput * privateInput === publicInput;
@@ -127,10 +125,12 @@ export function DemoPage() {
 
   // Fetch balance when connected
   useEffect(() => {
-    if (connected) {
-      fetchBalance();
+    if (connected && publicKey) {
+      connection.getBalance(publicKey).then((bal) => {
+        setBalance(bal / LAMPORTS_PER_SOL);
+      });
     }
-  }, [connected, fetchBalance]);
+  }, [connected, publicKey, connection]);
 
   // Transpile circuit code to Noir
   useEffect(() => {
@@ -187,6 +187,7 @@ export function DemoPage() {
       const izi = await IziNoir.init({
         provider: Provider.Arkworks,
         chain: Chain.Solana,
+        network: Network.Devnet,
       });
 
       await izi.compile(noirCode);
@@ -195,6 +196,9 @@ export function DemoPage() {
         expected: String(publicInput),
         secret: String(privateInput),
       }) as SolanaProofData;
+
+      // Store IziNoir instance for deploy/verify
+      setIziInstance(izi);
 
       // Local verification
       const localVerified = await izi.verify(
@@ -231,9 +235,9 @@ export function DemoPage() {
     }
   }, [noirCode, publicInput, privateInput]);
 
-  // Deploy VK
+  // Deploy VK using new simplified SDK API
   const handleDeploy = useCallback(async () => {
-    if (!proof || !connected) return;
+    if (!iziInstance || !connected || !publicKey || !sendTransaction) return;
 
     setIsDeploying(true);
     setDeployError(null);
@@ -246,11 +250,13 @@ export function DemoPage() {
 
     try {
       setDeployStep(2);
-      const result = await deploy(proof);
+
+      // Use new simplified deploy API
+      const result = await iziInstance.deploy({ publicKey, sendTransaction });
       setDeployStep(3);
 
       setVkAccount(result.vkAccount);
-      setDeployTx(result.txSignature);
+      setDeployTx(result.signature);
       animateSuccessPulse('.deploy-success');
     } catch (error) {
       console.error('Deploy error:', error);
@@ -260,28 +266,25 @@ export function DemoPage() {
       setIsDeploying(false);
       setDeployStep(0);
     }
-  }, [proof, connected, deploy]);
+  }, [iziInstance, connected, publicKey, sendTransaction]);
 
-  // Verify on-chain
+  // Verify on-chain using new simplified SDK API
   const handleVerify = useCallback(async () => {
-    if (!proof || !vkAccount) return;
+    if (!iziInstance || !vkAccount || !publicKey || !sendTransaction) return;
 
     setVerifyError(null);
     setVerifyStep('building');
 
     try {
       setVerifyStep('signing');
-      const result = await verify(
-        proof,
-        vkAccount,
-        (step) => {
-          if (step === 'submitting') setVerifyStep('submitting');
-          if (step === 'confirming') setVerifyStep('confirming');
-        }
-      );
+      setVerifyStep('submitting');
 
+      // Use new simplified verifyOnChain API
+      const result = await iziInstance.verifyOnChain({ publicKey, sendTransaction }, vkAccount);
+
+      setVerifyStep('confirming');
       setVerified(result.verified);
-      setVerifyTx(result.txSignature);
+      setVerifyTx(result.signature);
       setVerifyStep('verified');
 
       setTimeout(() => {
@@ -294,7 +297,7 @@ export function DemoPage() {
       setVerifyStep('error');
       animateError('.verify-error');
     }
-  }, [proof, vkAccount, verify]);
+  }, [iziInstance, vkAccount, publicKey, sendTransaction]);
 
   const isVerifying = verifyStep !== 'idle' && verifyStep !== 'verified' && verifyStep !== 'error';
 
@@ -341,15 +344,6 @@ export function DemoPage() {
         </svg>
 
         <div className="relative z-10 text-center max-w-4xl">
-          {/* Logo */}
-          <div className="mb-8">
-            <span className="text-6xl md:text-7xl font-black tracking-tighter">
-              <span className="brand-gradient">IZI</span>
-              <span className="text-white">-</span>
-              <span className="text-noir-orange">NOIR</span>
-            </span>
-          </div>
-
           <h1 className="demo-hero-title text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
             Build Your ZK Proof
           </h1>
@@ -490,9 +484,26 @@ export function DemoPage() {
                 {/* Validation inline */}
                 <div className={`validation-box mt-auto ${inputsValid ? 'valid' : 'invalid'}`}>
                   {inputsValid ? (
-                    <span>✓ {privateInput}² = {privateInput * privateInput} matches {publicInput}</span>
+                    <div className="flex items-center justify-center gap-3">
+                      <svg className="w-5 h-5 text-solana-green flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span>
+                        <span className="text-solana-purple">{privateInput}</span>² = {privateInput * privateInput} matches <span className="text-solana-green font-semibold">{publicInput}</span>
+                      </span>
+                    </div>
                   ) : (
-                    <span>⚠ {privateInput}² = {privateInput * privateInput} ≠ {publicInput}</span>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        <svg className="w-5 h-5 text-amber-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span className="font-medium">Cannot satisfy constraint</span>
+                      </div>
+                      <div className="text-xs opacity-80">
+                        <span className="text-solana-purple">{privateInput}</span>² = <span className="text-white">{privateInput * privateInput}</span> ≠ <span className="text-solana-green">{publicInput}</span>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -645,14 +656,14 @@ export function DemoPage() {
                   <div className="text-sm space-y-1">
                     <div>
                       <span className="text-gray-500">VK: </span>
-                      <a href={getAccountExplorerUrl(vkAccount)} target="_blank" rel="noopener noreferrer" className="tx-link font-mono">
+                      <a href={getExplorerAccountUrl(Network.Devnet, vkAccount)} target="_blank" rel="noopener noreferrer" className="tx-link font-mono">
                         {truncateAddress(vkAccount)}
                       </a>
                     </div>
                     {deployTx && (
                       <div>
                         <span className="text-gray-500">Tx: </span>
-                        <a href={getExplorerUrl(deployTx)} target="_blank" rel="noopener noreferrer" className="tx-link font-mono">
+                        <a href={getExplorerTxUrl(Network.Devnet, deployTx)} target="_blank" rel="noopener noreferrer" className="tx-link font-mono">
                           {truncateAddress(deployTx)}
                         </a>
                       </div>
@@ -773,7 +784,7 @@ export function DemoPage() {
                   {verifyTx && (
                     <div className="text-sm">
                       <a
-                        href={getExplorerUrl(verifyTx)}
+                        href={getExplorerTxUrl(Network.Devnet, verifyTx)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="tx-link"
@@ -804,7 +815,7 @@ export function DemoPage() {
       <footer className="py-12 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold brand-gradient">IZI-NOIR</span>
+            <span className="text-xl font-bold text-white">IZI-NOIR</span>
             <span className="text-gray-700">|</span>
             <span className="text-gray-500 text-sm">Interactive Demo</span>
           </div>

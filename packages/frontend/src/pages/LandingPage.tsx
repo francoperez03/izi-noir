@@ -174,46 +174,42 @@ fn verify_membership(
               </div>
             </div>
 
-            {/* Step 3: PROVE */}
+            {/* Step 3: COMPILE */}
             <div className="workflow-step workflow-step-vertical step-prove opacity-0">
               <div className="step-header">
                 <span className="step-number">3</span>
-                <span className="step-label">Prove</span>
+                <span className="step-label">Compile</span>
               </div>
               <div className="step-content">
-                <CodeBlock code={`await izi.compile(noirCode);
-const proof = await izi.prove(inputs);
-// proof.size = 256 bytes (Groth16)`} />
-                <p className="step-description">256-byte Groth16 proof</p>
+                <CodeBlock code={`const { verifyingKey } = await izi.compile(noirCode);
+// VK ready for deployment`} />
+                <p className="step-description">Noir compile + trusted setup</p>
               </div>
             </div>
 
-            {/* Step 4: DEPLOY */}
+            {/* Step 4: PROVE */}
             <div className="workflow-step workflow-step-vertical step-deploy opacity-0">
               <div className="step-header">
                 <span className="step-number">4</span>
-                <span className="step-label">Deploy</span>
+                <span className="step-label">Prove</span>
               </div>
               <div className="step-content">
-                <CodeBlock code={`const deployData = izi.getDeployData();
-console.log(izi.vk);  // Verifying key ready`} />
-                <p className="step-description">One-click to Solana</p>
+                <CodeBlock code={`const proof = await izi.prove(inputs);
+// 256-byte Groth16 proof`} />
+                <p className="step-description">Fast proof generation</p>
               </div>
             </div>
 
-            {/* Step 5: VERIFY */}
+            {/* Step 5: DEPLOY & VERIFY */}
             <div className="workflow-step workflow-step-vertical step-verify opacity-0">
               <div className="step-header">
                 <span className="step-number">5</span>
                 <span className="step-label">Verify</span>
               </div>
               <div className="step-content">
-                <CodeBlock code={`// Off-chain
-const valid = await izi.verify(proof, publicInputs);
-
-// On-chain (Solana)
-const tx = await verifyOnChain(proof, vkAccount);`} />
-                <p className="step-description">On-chain or off-chain</p>
+                <CodeBlock code={`await izi.deploy(wallet);        // Deploy VK
+await izi.verifyOnChain(wallet); // Verify proof`} />
+                <p className="step-description">One-line Solana deployment</p>
               </div>
             </div>
           </div>
@@ -379,7 +375,7 @@ const tx = await verifyOnChain(proof, vkAccount);`} />
       <footer className="section-footer py-12 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold brand-gradient">IZI-NOIR</span>
+            <span className="text-xl font-bold text-white">IZI-NOIR</span>
             <span className="text-gray-700">|</span>
             <span className="text-gray-500 text-sm">Privacy for Solana</span>
           </div>

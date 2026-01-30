@@ -61,9 +61,9 @@ function heroEntrySequence() {
     opacity: [0, 1],
     translateY: [40, 0],
     filter: ['blur(8px)', 'blur(0px)'],
-    delay: stagger(60, { from: 'center' }),
-    duration: 800,
-  }, 300);
+    delay: stagger(40, { from: 'center' }),
+    duration: 600,
+  }, 100);
 
   // Circuit lines draw - use createDrawable
   const circuitLines = document.querySelectorAll('.circuit-line');
@@ -71,25 +71,25 @@ function heroEntrySequence() {
     const drawables = createDrawable('.circuit-line');
     tl.add(drawables, {
       draw: ['0%', '100%'],
-      duration: 1200,
-      delay: stagger(100),
+      duration: 800,
+      delay: stagger(80),
       ease: 'inOutQuad',
-    }, '-=400');
+    }, '-=300');
   }
 
   // Tagline fade in
   tl.add('.hero-tagline', {
     opacity: [0, 1],
     translateY: [20, 0],
-    duration: 600,
-  }, '-=600');
+    duration: 400,
+  }, '-=500');
 
-  // CTA button
+  // CTA button - appears quickly after tagline
   tl.add('.hero-cta', {
     opacity: [0, 1],
     scale: [0.95, 1],
-    duration: 400,
-  }, '-=200');
+    duration: 300,
+  }, '-=300');
 }
 
 /**

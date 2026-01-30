@@ -431,10 +431,12 @@
 
   .validation-box.valid {
     @apply bg-solana-green/10 border border-solana-green/30 text-solana-green;
+    box-shadow: 0 0 20px rgba(20, 241, 149, 0.1);
   }
 
   .validation-box.invalid {
-    @apply bg-yellow-500/10 border border-yellow-500/30 text-yellow-500;
+    @apply bg-amber-500/5 border border-amber-500/20 text-amber-400;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.05);
   }
 
   /* Grid equal height cards */
@@ -692,4 +694,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Error message wrapping */
+.deploy-error,
+.verify-error {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
