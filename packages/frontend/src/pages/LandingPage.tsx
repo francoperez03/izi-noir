@@ -18,7 +18,7 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="landing-container overflow-x-hidden">
+    <div className="landing-container overflow-x-hidden pt-16">
       {/* ===== HERO SECTION ===== */}
       <section className="section-hero min-h-screen flex flex-col items-center justify-center relative px-4">
         {/* SVG Circuit Background */}

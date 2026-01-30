@@ -111,6 +111,7 @@ export function DemoPage() {
 
   // Initialize WASM and animations
   useEffect(() => {
+    window.scrollTo(0, 0);
     initBrowserWasm();
 
     const timer = setTimeout(() => {
@@ -302,18 +303,7 @@ export function DemoPage() {
   const isVerifying = verifyStep !== 'idle' && verifyStep !== 'verified' && verifyStep !== 'error';
 
   return (
-    <div className="demo-container overflow-x-hidden">
-      {/* Back to Home */}
-      <Link
-        to="/"
-        className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-xl bg-black/40 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all duration-200 backdrop-blur-sm"
-      >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-        <span className="text-sm">Home</span>
-      </Link>
-
+    <div className="demo-container overflow-x-hidden pt-16">
       {/* ===== HERO SECTION ===== */}
       <section className="demo-section demo-section-hero relative">
         {/* Circuit background SVG */}

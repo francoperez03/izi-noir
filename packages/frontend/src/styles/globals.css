@@ -703,3 +703,293 @@
   overflow-wrap: break-word;
   max-width: 100%;
 }
+
+/* ================================
+   NAVBAR STYLES
+   ================================ */
+
+.navbar {
+  @apply fixed top-0 left-0 right-0 z-50;
+  background: transparent;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navbar-scrolled {
+  background: rgba(5, 5, 5, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.navbar-container {
+  @apply max-w-6xl mx-auto px-6 h-16 flex items-center justify-center;
+}
+
+/* Desktop Navigation - Centered */
+.navbar-nav-desktop {
+  @apply hidden md:flex items-center gap-10;
+}
+
+.nav-link {
+  @apply relative px-1 py-2 text-sm font-medium tracking-wide;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.2s ease;
+}
+
+.nav-link-text {
+  @apply relative z-10;
+}
+
+.nav-link-underline {
+  @apply absolute bottom-0 left-0 right-0 h-px bg-white;
+  transform: scaleX(0);
+  transform-origin: center;
+  opacity: 0;
+}
+
+.nav-link:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Hamburger */
+.navbar-hamburger {
+  @apply md:hidden absolute right-6 w-8 h-8 flex flex-col items-center justify-center gap-1.5;
+}
+
+.hamburger-line {
+  @apply w-5 h-px bg-white/60 rounded-full;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navbar-hamburger.open .hamburger-line:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.navbar-hamburger.open .hamburger-line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.navbar-hamburger.open .hamburger-line:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* Mobile Navigation */
+.navbar-nav-mobile {
+  @apply md:hidden absolute top-full left-0 right-0;
+  @apply flex flex-col items-center gap-4 py-8;
+  background: rgba(5, 5, 5, 0.95);
+  backdrop-filter: blur(20px);
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navbar-nav-mobile.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.nav-link-mobile {
+  @apply text-base font-medium tracking-wide;
+  color: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.navbar-nav-mobile.open .nav-link-mobile {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.nav-link-mobile:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav-link-mobile.active {
+  color: #fff;
+}
+
+/* ================================
+   ECOSYSTEM GRID STYLES
+   ================================ */
+
+.ecosystem-grid {
+  @apply w-full max-w-2xl mx-auto;
+}
+
+.ecosystem-center {
+  @apply flex justify-center mb-10;
+}
+
+.center-badge {
+  @apply flex flex-col items-center;
+}
+
+.center-label {
+  @apply text-3xl md:text-4xl font-bold tracking-tight;
+  background: linear-gradient(135deg, var(--solana-purple) 0%, var(--solana-green) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.center-sublabel {
+  @apply text-xs uppercase tracking-[0.3em] text-gray-500 mt-1;
+}
+
+.ecosystem-nodes {
+  @apply flex flex-col gap-3;
+}
+
+.ecosystem-node-link {
+  @apply block;
+}
+
+.ecosystem-node-card {
+  @apply flex items-center gap-4 px-5 py-4 rounded-xl;
+  @apply border border-white/[0.06] bg-white/[0.02];
+  @apply cursor-pointer;
+  transition: all 0.25s ease;
+}
+
+.ecosystem-node-card:hover {
+  @apply border-white/10 bg-white/[0.04];
+}
+
+.ecosystem-node-card .node-icon {
+  @apply w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0;
+  @apply text-gray-400;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.25s ease;
+}
+
+.ecosystem-node-card:hover .node-icon {
+  @apply text-white;
+  background: rgba(153, 69, 255, 0.1);
+  border-color: rgba(153, 69, 255, 0.2);
+}
+
+.ecosystem-node-card .node-content {
+  @apply flex-1 min-w-0;
+}
+
+.ecosystem-node-card .node-label {
+  @apply text-white font-medium text-sm;
+}
+
+.ecosystem-node-card .node-description {
+  @apply text-gray-500 text-xs mt-0.5 truncate;
+}
+
+.ecosystem-node-card .node-arrow {
+  @apply text-gray-600 flex-shrink-0;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.25s ease;
+}
+
+.ecosystem-node-card:hover .node-arrow {
+  @apply text-gray-400;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ================================
+   WHY PAGE STYLES
+   ================================ */
+
+.why-container {
+  min-height: 100vh;
+}
+
+.section-why-hero,
+.section-why-problem,
+.section-why-ecosystem,
+.section-why-benefits,
+.section-why-cta {
+  @apply relative;
+}
+
+.comparison-table {
+  transition: border-color 0.3s ease;
+}
+
+.comparison-table:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.comparison-row {
+  transition: background-color 0.2s ease;
+}
+
+.comparison-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.benefit-card {
+  transition: all 0.3s ease;
+}
+
+.benefit-card:hover {
+  box-shadow: 0 0 30px rgba(153, 69, 255, 0.1);
+}
+
+/* Impact Stat Section */
+.section-why-impact {
+  @apply relative;
+}
+
+.impact-stat {
+  @apply relative;
+}
+
+.impact-number {
+  background: linear-gradient(180deg, var(--solana-purple) 0%, rgba(153, 69, 255, 0.3) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 60px rgba(153, 69, 255, 0.3));
+}
+
+.impact-subtitle {
+  @apply font-medium;
+}
+
+.impact-cta {
+  @apply italic;
+}
+
+/* Use Cases Section */
+.section-why-usecases {
+  @apply relative;
+}
+
+.use-case-card {
+  transition: all 0.3s ease;
+}
+
+.use-case-card:hover {
+  box-shadow: 0 0 30px rgba(153, 69, 255, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Roadmap Section */
+.section-why-roadmap {
+  @apply relative;
+}
+
+.roadmap-item {
+  transition: all 0.3s ease;
+}
+
+.roadmap-dot {
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.roadmap-item:hover .roadmap-dot {
+  transform: translateX(-50%) scale(1.2);
+}
