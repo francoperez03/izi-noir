@@ -5,11 +5,11 @@ import { initWhyAnimations, cleanupWhyAnimations } from '../lib/why-animations';
 
 const COMPARISON_DATA = [
   {
-    today: 'Hire specialized cryptographers',
-    withIzi: 'Your current JavaScript team',
+    today: 'Learn a new language (Noir, Circom)',
+    withIzi: 'Use JavaScript you already know',
     todayIcon: (
       <svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -69,22 +69,18 @@ const USE_CASES_DATA = [
   {
     title: 'Private Voting',
     description: 'DAO governance without revealing votes',
-    icon: '🗳️',
   },
   {
     title: 'Credential Verification',
     description: 'Prove identity without exposing data',
-    icon: '🪪',
   },
   {
     title: 'Anonymous Payments',
     description: 'Private transactions on Solana',
-    icon: '💸',
   },
   {
     title: 'Private NFT Ownership',
     description: 'Verify ownership without revealing holder',
-    icon: '🖼️',
   },
 ];
 
@@ -117,12 +113,12 @@ export function WhyPage() {
           </h1>
 
           <p className="why-hero-subtitle text-2xl md:text-3xl lg:text-4xl text-gray-300 mb-6 opacity-0">
-            "Privacy shouldn't require<br className="hidden sm:block" />
-            a PhD in cryptography"
+            "Noir made ZK accessible.<br className="hidden sm:block" />
+            We make it familiar."
           </p>
 
           <p className="why-hero-body text-lg md:text-xl text-gray-500 max-w-2xl mx-auto opacity-0">
-            The first toolkit that enables any development team to add zero-knowledge privacy to their Solana applications, without cryptography experts.
+            Zero-knowledge proofs are no longer just for cryptographers. We bridge the gap — so your JavaScript team can add privacy to Solana using syntax they already know.
           </p>
         </div>
 
@@ -153,7 +149,7 @@ export function WhyPage() {
       <section className="section-why-problem flex items-center justify-center px-4 py-24">
         <div className="max-w-4xl mx-auto w-full">
           <h2 className="problem-title text-4xl md:text-5xl lg:text-6xl font-bold text-center mb-16 opacity-0">
-            The Hidden Cost of <span className="text-red-400">Privacy</span>
+            The <span className="text-amber-400">Familiarity</span> Gap
           </h2>
 
           <div className="comparison-table rounded-2xl border border-white/10 bg-black/30 backdrop-blur-sm overflow-hidden">
@@ -247,7 +243,6 @@ export function WhyPage() {
                 key={index}
                 className="use-case-card p-6 rounded-2xl border border-white/10 bg-black/30 backdrop-blur-sm hover:border-solana-purple/50 transition-all duration-300 hover:-translate-y-1"
               >
-                <div className="text-4xl mb-4">{useCase.icon}</div>
                 <h3 className="text-xl font-bold text-white mb-2">{useCase.title}</h3>
                 <p className="text-gray-400">{useCase.description}</p>
               </div>

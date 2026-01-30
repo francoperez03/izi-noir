@@ -340,7 +340,7 @@ export function DemoPage() {
 
           <p className="demo-hero-subtitle text-xl md:text-2xl text-gray-400 max-w-2xl mx-auto opacity-0">
             From JavaScript to Solana verification.<br className="hidden sm:block" />
-            No cryptography knowledge required.
+            Use the syntax you already know.
           </p>
 
           {/* Quick Start Commands */}

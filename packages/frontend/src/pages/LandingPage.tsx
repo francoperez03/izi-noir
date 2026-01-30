@@ -130,8 +130,8 @@ fn verify_membership(
           {/* Overlay message */}
           <div className="problem-message absolute inset-0 flex items-center justify-center opacity-0 px-4">
             <h2 className="text-5xl md:text-7xl lg:text-8xl font-bold leading-tight text-center max-w-5xl">
-              What if privacy<br/>
-              <span className="text-gray-500">was this simple?</span>
+              What if ZK felt<br/>
+              <span className="text-gray-500">as natural as JavaScript?</span>
             </h2>
           </div>
         </div>
@@ -320,7 +320,7 @@ await izi.verifyOnChain(wallet); // Verify proof`} />
 
           <p className="text-lg md:text-xl text-gray-400 mb-16 max-w-xl mx-auto">
             From JavaScript to on-chain verification.<br/>
-            Zero cryptography knowledge required.
+            Using syntax you already know.
           </p>
 
           {/* Stats */}
