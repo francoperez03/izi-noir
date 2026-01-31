@@ -1,6 +1,6 @@
 {
   "name": "@izi-noir/sdk",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "Write ZK circuits in JavaScript/TypeScript, generate Noir code and proofs automatically",
   "type": "module",
   "main": "./dist/index.cjs",

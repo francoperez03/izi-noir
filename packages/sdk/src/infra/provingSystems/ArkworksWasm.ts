@@ -227,15 +227,23 @@ async function initWasm(): Promise<ArkworksWasmModule> {
         wasmModule = module as unknown as ArkworksWasmModule;
       } else {
         // Browser: construct URL based on this module's location
-        // Detect if running from source or bundled dist to use correct relative path
         const moduleUrl = new URL(import.meta.url);
         const isSourceFile = moduleUrl.pathname.includes('/src/');
-        // From source: src/infra/provingSystems/ -> src/wasm/web/ (2 levels up)
-        // From dist: dist/ -> dist/wasm/web/ (same level)
-        const wasmRelativePath = isSourceFile
-          ? '../../wasm/web/arkworks_groth16_wasm.js'
-          : './wasm/web/arkworks_groth16_wasm.js';
-        const wasmJsUrl = new URL(wasmRelativePath, moduleUrl);
+        // Check if running in Vite production build (assets are in /assets/)
+        const isViteProduction = moduleUrl.pathname.includes('/assets/');
+
+        let wasmJsUrl: URL;
+        if (isSourceFile) {
+          // Development from source: src/infra/provingSystems/ -> src/wasm/web/
+          wasmJsUrl = new URL('../../wasm/web/arkworks_groth16_wasm.js', moduleUrl);
+        } else if (isViteProduction) {
+          // Production build: WASM files are served from /wasm/web/ (public folder)
+          wasmJsUrl = new URL('/wasm/web/arkworks_groth16_wasm.js', moduleUrl.origin);
+        } else {
+          // SDK dist: dist/ -> dist/wasm/web/
+          wasmJsUrl = new URL('./wasm/web/arkworks_groth16_wasm.js', moduleUrl);
+        }
+
         // @ts-ignore - Dynamic import with URL
         const module = await import(/* @vite-ignore */ wasmJsUrl.href);
         await module.default();
@@ -332,19 +340,12 @@ authors = [""]
         // Shift by 1 to account for w_0 = 1
         const r1csIndex = noirIndex + 1;
         witnessIndexMapping.set(noirIndex, r1csIndex);
-        console.log(`  Parameter "${p.name}" (${p.visibility}): noir[${noirIndex}] → R1CS w_${r1csIndex}`);
         if (p.visibility === 'public') {
           publicR1csIndices.push(r1csIndex);
         } else if (p.visibility === 'private') {
           privateR1csIndices.push(r1csIndex);
         }
       });
-
-      console.log('=== COMPILE: R1CS Witness Assignment ===');
-      console.log('Public R1CS indices:', publicR1csIndices);
-      console.log('Private R1CS indices:', privateR1csIndices);
-      console.log('Witness mapping:', Object.fromEntries(witnessIndexMapping));
-      console.log('=========================================');
 
       // Generate R1CS constraints from the Noir code pattern
       // For the demo circuit: assert(secret * secret == expected)
@@ -370,14 +371,9 @@ authors = [""]
           b: [['0x1', privateIdx]], // secret
           c: [['0x1', publicIdx]], // expected
         });
-        console.log(`  Added constraint: w_${privateIdx} * w_${privateIdx} = w_${publicIdx}`);
-      } else {
-        // For more complex circuits, we'd need to parse the Noir code
-        console.warn('Complex circuit detected - R1CS constraint generation may be incomplete');
       }
 
       const r1csJson = JSON.stringify(r1cs);
-      console.log('R1CS JSON:', r1csJson);
 
       // Perform setup using R1CS
       let provingKey: string | undefined;
@@ -386,14 +382,11 @@ authors = [""]
 
       if (this.config.cacheKeys) {
         try {
-          console.log('Running trusted setup from R1CS...');
           const setupResult = wasm.setup_from_r1cs(r1csJson);
           provingKey = setupResult.proving_key;
           verifyingKey = setupResult.verifying_key;
           verifyingKeyGnark = setupResult.verifying_key_gnark;
-          console.log('Setup complete!');
         } catch (error) {
-          console.error('Setup failed:', error);
           throw new Error(`R1CS setup failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
@@ -442,56 +435,21 @@ authors = [""]
     // to get WitnessMap (Map<number, string> where values are hex field elements)
     const witnessMapNoir = decompressWitness(compressedWitness);
 
-    // DEBUG: Log witness map and circuit info
-    console.log('=== ARKWORKS WASM DEBUG ===');
-    console.log('Circuit ABI parameters:', circuit.abi.parameters);
-    console.log('Inputs provided:', JSON.stringify(inputs));
-    console.log('Compressed witness size:', compressedWitness.length, 'bytes');
-    console.log('Decompressed witness entries:', witnessMapNoir.size);
-
-    // Show witness entries
-    console.log('Witness map entries (first 10):');
-    const sortedWitness = Array.from(witnessMapNoir.entries()).sort(([a], [b]) => a - b);
-    for (const [index, value] of sortedWitness.slice(0, 10)) {
-      const strVal = String(value);
-      console.log(`  witness[${index}] = "${strVal.slice(0, 66)}${strVal.length > 66 ? '...' : ''}"`);
-      // Interpret as hex
-      if (strVal.startsWith('0x')) {
-        try {
-          const decVal = BigInt(strVal).toString(10);
-          console.log(`    → decimal: ${decVal}`);
-        } catch {
-          console.log(`    → failed to parse as BigInt`);
-        }
-      }
-    }
-
     // Convert witness to R1CS format using the witness index mapping
     // noir witness[i] → R1CS w_(i+1) because w_0 = 1
     const witnessMap: Record<string, string> = {};
     const witnessMapping = circuit.witnessIndexMapping;
 
-    console.log('Converting noir witness to R1CS witness:');
     for (const [noirIndex, value] of witnessMapNoir.entries()) {
       const r1csIndex = witnessMapping.get(noirIndex) ?? (noirIndex + 1);
       const strVal = String(value);
       witnessMap[r1csIndex.toString()] = strVal;
-      console.log(`  noir[${noirIndex}] → R1CS w_${r1csIndex} = ${strVal.slice(0, 20)}...`);
     }
     const witnessJson = JSON.stringify(witnessMap);
-    console.log('Witness JSON for prove:', witnessJson.slice(0, 200) + '...');
-
-    // Parse R1CS to show constraint info
-    const r1csParsed: R1csDefinition = JSON.parse(circuit.r1csJson);
-    console.log('R1CS public_inputs:', r1csParsed.public_inputs);
-    console.log('R1CS private_inputs:', r1csParsed.private_inputs);
-    console.log('R1CS num_witnesses:', r1csParsed.num_witnesses);
-    console.log('R1CS constraints:', r1csParsed.constraints.length);
 
     // Ensure we have a proving key
     let provingKey = circuit.provingKey;
     if (!provingKey) {
-      console.log('Running setup_from_r1cs...');
       const setupResult = wasm.setup_from_r1cs(circuit.r1csJson);
       provingKey = setupResult.proving_key;
       // Cache for future use
@@ -501,18 +459,7 @@ authors = [""]
     }
 
     // Generate proof using R1CS
-    console.log('Generating proof from R1CS...');
     const proofResult = wasm.prove_from_r1cs(provingKey, circuit.r1csJson, witnessJson);
-
-    // DEBUG: Log proof result
-    console.log('=== PROOF RESULT DEBUG ===');
-    console.log('Proof public inputs from arkworks:', proofResult.public_inputs);
-    proofResult.public_inputs.forEach((input, i) => {
-      const hexValue = input.startsWith('0x') ? input : `0x${input}`;
-      const decValue = BigInt(hexValue).toString(10);
-      console.log(`  Public input ${i}: ${input} (dec: ${decValue})`);
-    });
-    console.log('===========================');
 
     // Return proof in gnark format for Solana compatibility
     const proofBytes = base64ToUint8Array(proofResult.proof_gnark);

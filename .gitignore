@@ -40,6 +40,9 @@ coverage/
 test-ledger/
 .anchor/
 
+# Generated WASM files (copied during build)
+packages/frontend/public/wasm/
+
 # TypeScript
 *.tsbuildinfo
 

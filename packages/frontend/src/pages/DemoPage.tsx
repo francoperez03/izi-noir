@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import initNoirC from '@noir-lang/noirc_abi';
-import initACVM from '@noir-lang/acvm_js';
-import acvm from '@noir-lang/acvm_js/web/acvm_js_bg.wasm?url';
-import noirc from '@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url';
+import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import initNoirC from "@noir-lang/noirc_abi";
+import initACVM from "@noir-lang/acvm_js";
+import acvm from "@noir-lang/acvm_js/web/acvm_js_bg.wasm?url";
+import noirc from "@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url";
 import {
   IziNoir,
   Provider,
@@ -15,8 +15,8 @@ import {
   generateNoir,
   type SolanaProofData,
   getExplorerTxUrl,
-  getExplorerAccountUrl
-} from '@izi-noir/sdk';
+  getExplorerAccountUrl,
+} from "@izi-noir/sdk";
 import {
   initDemoAnimations,
   cleanupDemoAnimations,
@@ -26,11 +26,11 @@ import {
   animateError,
   animateProofResults,
   animateCopySuccess,
-} from '../lib/demo-animations';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { CodeBlock } from '../components/CodeBlock';
-import { EditableCodeBlock } from '../components/EditableCodeBlock';
+} from "../lib/demo-animations";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { CodeBlock } from "../components/CodeBlock";
+import { EditableCodeBlock } from "../components/EditableCodeBlock";
 
 // Default circuit code
 const DEFAULT_CIRCUIT = `([expected], [secret]) => {
@@ -45,10 +45,7 @@ const DEFAULT_PRIVATE_INPUT = 10;
 let wasmInitialized = false;
 async function initBrowserWasm() {
   if (wasmInitialized) return;
-  await Promise.all([
-    initACVM({ module_or_path: acvm }),
-    initNoirC({ module_or_path: noirc }),
-  ]);
+  await Promise.all([initACVM({ module_or_path: acvm }), initNoirC({ module_or_path: noirc })]);
   markWasmInitialized();
   wasmInitialized = true;
 }
@@ -67,7 +64,7 @@ export function DemoPage() {
   const [transpileError, setTranspileError] = useState<string | null>(null);
 
   // UI state
-  const [copiedCommand, setCopiedCommand] = useState<'npx' | 'npm' | null>(null);
+  const [copiedCommand, setCopiedCommand] = useState<"npx" | "npm" | null>(null);
   const [showNoir, setShowNoir] = useState(false);
 
   // Proof state
@@ -84,19 +81,26 @@ export function DemoPage() {
   const [deployError, setDeployError] = useState<string | null>(null);
 
   // Verify state
-  type VerifyStep = 'idle' | 'building' | 'signing' | 'submitting' | 'confirming' | 'verified' | 'error';
-  const [verifyStep, setVerifyStep] = useState<VerifyStep>('idle');
+  type VerifyStep =
+    | "idle"
+    | "building"
+    | "signing"
+    | "submitting"
+    | "confirming"
+    | "verified"
+    | "error";
+  const [verifyStep, setVerifyStep] = useState<VerifyStep>("idle");
   const [verifyTx, setVerifyTx] = useState<string | null>(null);
   const [verified, setVerified] = useState<boolean | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   // Verify steps config
   const VERIFY_STEPS = [
-    { id: 'building', label: 'Building transaction', icon: '🔧' },
-    { id: 'signing', label: 'Waiting for signature', icon: '✍️' },
-    { id: 'submitting', label: 'Submitting to Solana', icon: '🚀' },
-    { id: 'confirming', label: 'Confirming', icon: '⏳' },
-    { id: 'verified', label: 'Verified on-chain', icon: '✓' },
+    { id: "building", label: "Building transaction", icon: "🔧" },
+    { id: "signing", label: "Waiting for signature", icon: "✍️" },
+    { id: "submitting", label: "Submitting to Solana", icon: "🚀" },
+    { id: "confirming", label: "Confirming", icon: "⏳" },
+    { id: "verified", label: "Verified on-chain", icon: "✓" },
   ];
 
   // Wallet & Solana
@@ -105,6 +109,7 @@ export function DemoPage() {
   const { publicKey, connected, sendTransaction } = useWallet();
   const [balance, setBalance] = useState<number | null>(null);
   const [iziInstance, setIziInstance] = useState<IziNoir | null>(null);
+  const [compiledNoirCode, setCompiledNoirCode] = useState<string | null>(null);
 
   // Computed: inputs validation
   const inputsValid = privateInput * privateInput === publicInput;
@@ -138,7 +143,7 @@ export function DemoPage() {
     const transpileCode = () => {
       try {
         setTranspileError(null);
-        const fn = new Function('return ' + circuitCode)();
+        const fn = new Function("return " + circuitCode)();
         const parser = new AcornParser();
         const parsedCircuit = parser.parse(fn, [publicInput], [privateInput]);
         const result = generateNoir(parsedCircuit);
@@ -154,8 +159,8 @@ export function DemoPage() {
   }, [circuitCode, publicInput, privateInput]);
 
   // Copy command to clipboard
-  const handleCopyCommand = async (type: 'npx' | 'npm') => {
-    const command = type === 'npx' ? 'npx create-izi-noir my-app' : 'npm i @izi-noir/sdk';
+  const handleCopyCommand = async (type: "npx" | "npm") => {
+    const command = type === "npx" ? "npx create-izi-noir my-app" : "npm i @izi-noir/sdk";
     await navigator.clipboard.writeText(command);
     setCopiedCommand(type);
 
@@ -174,41 +179,47 @@ export function DemoPage() {
     setProof(null);
     setProofTime(null);
 
-    // Reset downstream state
-    setVkAccount(null);
-    setDeployTx(null);
-    setVerifyTx(null);
-    setVerified(null);
-
     try {
       await initBrowserWasm();
 
       const startTime = performance.now();
 
-      const izi = await IziNoir.init({
-        provider: Provider.Arkworks,
-        chain: Chain.Solana,
-        network: Network.Devnet,
-      });
+      // Check if we need to recompile (circuit code changed)
+      let izi = iziInstance;
+      const needsRecompile = !izi || compiledNoirCode !== noirCode;
 
-      await izi.compile(noirCode);
+      if (needsRecompile) {
+        izi = await IziNoir.init({
+          provider: Provider.Arkworks,
+          chain: Chain.Solana,
+          network: Network.Devnet,
+        });
 
-      const solanaProof = await izi.prove({
+        await izi.compile(noirCode);
+        setIziInstance(izi);
+        setCompiledNoirCode(noirCode);
+
+        // Reset deploy state (new VK required)
+        setVkAccount(null);
+        setDeployTx(null);
+        setVerifyTx(null);
+        setVerified(null);
+        setVerifyStep("idle");
+      }
+
+      const solanaProof = (await izi!.prove({
         expected: String(publicInput),
         secret: String(privateInput),
-      }) as SolanaProofData;
-
-      // Store IziNoir instance for deploy/verify
-      setIziInstance(izi);
+      })) as SolanaProofData;
 
       // Local verification
-      const localVerified = await izi.verify(
+      const localVerified = await izi!.verify(
         solanaProof.proof.bytes,
         solanaProof.publicInputs.hex
       );
 
       if (!localVerified) {
-        throw new Error('Proof failed local verification!');
+        throw new Error("Proof failed local verification!");
       }
 
       const endTime = performance.now();
@@ -219,22 +230,22 @@ export function DemoPage() {
       setTimeout(() => {
         animateProofResults();
 
-        const timeEl = document.querySelector('.proof-time-value');
+        const timeEl = document.querySelector(".proof-time-value");
         if (timeEl) {
-          animateCounter(timeEl as HTMLElement, Math.round(endTime - startTime), 800, ' ms');
+          animateCounter(timeEl as HTMLElement, Math.round(endTime - startTime), 800, " ms");
         }
 
-        animateCheckmark('.success-checkmark');
-        animateSuccessPulse('.proof-result-card');
+        animateCheckmark(".success-checkmark");
+        animateSuccessPulse(".proof-result-card");
       }, 100);
     } catch (error) {
-      console.error('Proof generation error:', error);
+      console.error("Proof generation error:", error);
       setProofError((error as Error).message);
-      animateError('.proof-error');
+      animateError(".proof-error");
     } finally {
       setIsGenerating(false);
     }
-  }, [noirCode, publicInput, privateInput]);
+  }, [noirCode, publicInput, privateInput, iziInstance, compiledNoirCode]);
 
   // Deploy VK using new simplified SDK API
   const handleDeploy = useCallback(async () => {
@@ -247,7 +258,7 @@ export function DemoPage() {
     // Reset verify state
     setVerifyTx(null);
     setVerified(null);
-    setVerifyStep('idle');
+    setVerifyStep("idle");
 
     try {
       setDeployStep(2);
@@ -258,11 +269,11 @@ export function DemoPage() {
 
       setVkAccount(result.vkAccount);
       setDeployTx(result.signature);
-      animateSuccessPulse('.deploy-success');
+      animateSuccessPulse(".deploy-success");
     } catch (error) {
-      console.error('Deploy error:', error);
+      console.error("Deploy error:", error);
       setDeployError((error as Error).message);
-      animateError('.deploy-error');
+      animateError(".deploy-error");
     } finally {
       setIsDeploying(false);
       setDeployStep(0);
@@ -274,33 +285,33 @@ export function DemoPage() {
     if (!iziInstance || !vkAccount || !publicKey || !sendTransaction) return;
 
     setVerifyError(null);
-    setVerifyStep('building');
+    setVerifyStep("building");
 
     try {
-      setVerifyStep('signing');
-      setVerifyStep('submitting');
+      setVerifyStep("signing");
+      setVerifyStep("submitting");
 
       // Use new simplified verifyOnChain API
       const result = await iziInstance.verifyOnChain({ publicKey, sendTransaction }, vkAccount);
 
-      setVerifyStep('confirming');
+      setVerifyStep("confirming");
       setVerified(result.verified);
       setVerifyTx(result.signature);
-      setVerifyStep('verified');
+      setVerifyStep("verified");
 
       setTimeout(() => {
-        animateCheckmark('.final-checkmark');
-        animateSuccessPulse('.verified-badge');
+        animateCheckmark(".final-checkmark");
+        animateSuccessPulse(".verified-badge");
       }, 100);
     } catch (error) {
-      console.error('Verify error:', error);
+      console.error("Verify error:", error);
       setVerifyError((error as Error).message);
-      setVerifyStep('error');
-      animateError('.verify-error');
+      setVerifyStep("error");
+      animateError(".verify-error");
     }
   }, [iziInstance, vkAccount, publicKey, sendTransaction]);
 
-  const isVerifying = verifyStep !== 'idle' && verifyStep !== 'verified' && verifyStep !== 'error';
+  const isVerifying = verifyStep !== "idle" && verifyStep !== "verified" && verifyStep !== "error";
 
   return (
     <div className="demo-container overflow-x-hidden pt-16">
@@ -326,11 +337,11 @@ export function DemoPage() {
             strokeWidth="1"
             fill="none"
           />
-          <circle cx="600" cy="400" r="4" fill="#FF6B35" opacity="0.6"/>
-          <circle cx="200" cy="400" r="3" fill="#9945FF" opacity="0.4"/>
-          <circle cx="400" cy="300" r="3" fill="#9945FF" opacity="0.4"/>
-          <circle cx="1000" cy="400" r="3" fill="#14F195" opacity="0.4"/>
-          <circle cx="800" cy="500" r="3" fill="#14F195" opacity="0.4"/>
+          <circle cx="600" cy="400" r="4" fill="#FF6B35" opacity="0.6" />
+          <circle cx="200" cy="400" r="3" fill="#9945FF" opacity="0.4" />
+          <circle cx="400" cy="300" r="3" fill="#9945FF" opacity="0.4" />
+          <circle cx="1000" cy="400" r="3" fill="#14F195" opacity="0.4" />
+          <circle cx="800" cy="500" r="3" fill="#14F195" opacity="0.4" />
         </svg>
 
         <div className="relative z-10 text-center max-w-4xl">
@@ -339,7 +350,8 @@ export function DemoPage() {
           </h1>
 
           <p className="demo-hero-subtitle text-xl md:text-2xl text-gray-400 max-w-2xl mx-auto opacity-0">
-            From JavaScript to Solana verification.<br className="hidden sm:block" />
+            From JavaScript to Solana verification.
+            <br className="hidden sm:block" />
             Use the syntax you already know.
           </p>
 
@@ -349,10 +361,10 @@ export function DemoPage() {
               <span className="terminal-prompt">$</span>
               <code className="text-gray-300">npx create-izi-noir my-app</code>
               <button
-                className={`copy-btn copy-btn-npx ${copiedCommand === 'npx' ? 'copied' : ''}`}
-                onClick={() => handleCopyCommand('npx')}
+                className={`copy-btn copy-btn-npx ${copiedCommand === "npx" ? "copied" : ""}`}
+                onClick={() => handleCopyCommand("npx")}
               >
-                {copiedCommand === 'npx' ? '✓' : 'Copy'}
+                {copiedCommand === "npx" ? "✓" : "Copy"}
               </button>
             </div>
             <span className="text-gray-600 hidden sm:block">or</span>
@@ -360,10 +372,10 @@ export function DemoPage() {
               <span className="terminal-prompt">$</span>
               <code className="text-gray-300">npm i @izi-noir/sdk</code>
               <button
-                className={`copy-btn copy-btn-npm ${copiedCommand === 'npm' ? 'copied' : ''}`}
-                onClick={() => handleCopyCommand('npm')}
+                className={`copy-btn copy-btn-npm ${copiedCommand === "npm" ? "copied" : ""}`}
+                onClick={() => handleCopyCommand("npm")}
               >
-                {copiedCommand === 'npm' ? '✓' : 'Copy'}
+                {copiedCommand === "npm" ? "✓" : "Copy"}
               </button>
             </div>
           </div>
@@ -372,7 +384,7 @@ export function DemoPage() {
         {/* Scroll indicator */}
         <div className="demo-scroll-indicator absolute bottom-8 left-1/2 -translate-x-1/2 opacity-0">
           <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
-            <div className="w-1 h-2 bg-white/50 rounded-full mt-2 animate-bounce"/>
+            <div className="w-1 h-2 bg-white/50 rounded-full mt-2 animate-bounce" />
           </div>
         </div>
       </section>
@@ -387,10 +399,12 @@ export function DemoPage() {
           {/* Circuit Explainer */}
           <div className="circuit-explainer workflow-step-vertical opacity-0 mb-8">
             <p className="explainer-main">
-              This circuit proves: <strong>"I know a secret whose square equals the public value"</strong>
+              This circuit proves:{" "}
+              <strong>"I know a secret whose square equals the public value"</strong>
             </p>
             <p className="explainer-formula mt-2">
-              <span className="text-solana-purple">secret</span><sup>2</sup> = <span className="text-solana-green">public</span>
+              <span className="text-solana-purple">secret</span>
+              <sup>2</sup> = <span className="text-solana-green">public</span>
             </p>
           </div>
 
@@ -412,10 +426,10 @@ export function DemoPage() {
 
               {/* Noir Toggle */}
               <button
-                className={`noir-toggle ${showNoir ? 'open' : ''}`}
+                className={`noir-toggle ${showNoir ? "open" : ""}`}
                 onClick={() => setShowNoir(!showNoir)}
               >
-                {showNoir ? 'Hide' : 'View'} Generated Noir
+                {showNoir ? "Hide" : "View"} Generated Noir
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M19 9l-7 7-7-7" />
                 </svg>
@@ -424,7 +438,9 @@ export function DemoPage() {
               {showNoir && (
                 <div className="noir-preview mt-4">
                   {transpileError ? (
-                    <div className="text-red-400 text-sm p-3 bg-red-500/10 rounded-lg">{transpileError}</div>
+                    <div className="text-red-400 text-sm p-3 bg-red-500/10 rounded-lg">
+                      {transpileError}
+                    </div>
                   ) : noirCode ? (
                     <CodeBlock code={noirCode} />
                   ) : (
@@ -472,26 +488,50 @@ export function DemoPage() {
                 </div>
 
                 {/* Validation inline */}
-                <div className={`validation-box mt-auto ${inputsValid ? 'valid' : 'invalid'}`}>
+                <div className={`validation-box mt-auto ${inputsValid ? "valid" : "invalid"}`}>
                   {inputsValid ? (
                     <div className="flex items-center justify-center gap-3">
-                      <svg className="w-5 h-5 text-solana-green flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg
+                        className="w-5 h-5 text-solana-green flex-shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                       <span>
-                        <span className="text-solana-purple">{privateInput}</span>² = {privateInput * privateInput} matches <span className="text-solana-green font-semibold">{publicInput}</span>
+                        <span className="text-solana-purple">{privateInput}</span>² ={" "}
+                        {privateInput * privateInput} matches{" "}
+                        <span className="text-solana-green font-semibold">{publicInput}</span>
                       </span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
                       <div className="flex items-center gap-3">
-                        <svg className="w-5 h-5 text-amber-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeLinecap="round" strokeLinejoin="round"/>
+                        <svg
+                          className="w-5 h-5 text-amber-400 flex-shrink-0"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                         <span className="font-medium">Cannot satisfy constraint</span>
                       </div>
                       <div className="text-xs opacity-80">
-                        <span className="text-solana-purple">{privateInput}</span>² = <span className="text-white">{privateInput * privateInput}</span> ≠ <span className="text-solana-green">{publicInput}</span>
+                        <span className="text-solana-purple">{privateInput}</span>² ={" "}
+                        <span className="text-white">{privateInput * privateInput}</span> ≠{" "}
+                        <span className="text-solana-green">{publicInput}</span>
                       </div>
                     </div>
                   )}
@@ -499,6 +539,29 @@ export function DemoPage() {
               </div>
             </div>
           </div>
+
+          {/* VK Mismatch Warning */}
+          {vkAccount && compiledNoirCode !== noirCode && (
+            <div className="mt-6 max-w-2xl mx-auto p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm flex items-start gap-3">
+              <svg
+                className="w-5 h-5 flex-shrink-0 mt-0.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <div>
+                <span className="font-semibold">Circuit code changed.</span> Generating a new proof
+                will require re-deploying the VK.
+              </div>
+            </div>
+          )}
 
           {/* Generate Proof Button */}
           <div className="mt-10 text-center">
@@ -510,13 +573,27 @@ export function DemoPage() {
               {isGenerating ? (
                 <span className="flex items-center gap-3">
                   <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="none" opacity="0.3"/>
-                    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round"/>
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      opacity="0.3"
+                    />
+                    <path
+                      d="M12 2a10 10 0 0 1 10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
                   </svg>
                   Generating Groth16 Proof...
                 </span>
               ) : (
-                'Generate Groth16 Proof'
+                "Generate Groth16 Proof"
               )}
             </button>
           </div>
@@ -542,8 +619,23 @@ export function DemoPage() {
                 </div>
                 <div className="result-card proof-result-card">
                   <svg className="success-checkmark w-12 h-12 mx-auto" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" stroke="#14F195" strokeWidth="2" fill="none" opacity="0.3"/>
-                    <path d="M30 52 L44 66 L72 38" stroke="#14F195" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      stroke="#14F195"
+                      strokeWidth="2"
+                      fill="none"
+                      opacity="0.3"
+                    />
+                    <path
+                      d="M30 52 L44 66 L72 38"
+                      stroke="#14F195"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
                   </svg>
                   <div className="result-label mt-2">Locally Verified</div>
                 </div>
@@ -565,8 +657,18 @@ export function DemoPage() {
             <div className="deploy-panel demo-panel opacity-0">
               <h3 className="text-xl font-semibold mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-solana-green/20 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-solana-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" strokeLinecap="round" strokeLinejoin="round"/>
+                  <svg
+                    className="w-5 h-5 text-solana-green"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </div>
                 Deploy to Solana
@@ -580,15 +682,14 @@ export function DemoPage() {
                     <span className="text-solana-green text-sm font-medium">Connected</span>
                   </div>
                   <div className="mt-2 flex justify-between text-sm">
-                    <span className="text-gray-500 font-mono">{truncateAddress(publicKey.toBase58())}</span>
+                    <span className="text-gray-500 font-mono">
+                      {truncateAddress(publicKey.toBase58())}
+                    </span>
                     <span className="text-gray-400">{balance?.toFixed(4)} SOL</span>
                   </div>
                 </div>
               ) : (
-                <button
-                  className="demo-btn-secondary w-full mb-6"
-                  onClick={() => setVisible(true)}
-                >
+                <button className="demo-btn-secondary w-full mb-6" onClick={() => setVisible(true)}>
                   Connect Phantom Wallet
                 </button>
               )}
@@ -601,13 +702,27 @@ export function DemoPage() {
                 {isDeploying ? (
                   <span className="flex items-center justify-center gap-3">
                     <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="none" opacity="0.3"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round"/>
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        opacity="0.3"
+                      />
+                      <path
+                        d="M12 2a10 10 0 0 1 10 10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeLinecap="round"
+                      />
                     </svg>
                     Deploying...
                   </span>
                 ) : (
-                  'Deploy VK to Devnet'
+                  "Deploy VK to Devnet"
                 )}
               </button>
 
@@ -615,11 +730,14 @@ export function DemoPage() {
               {isDeploying && (
                 <div className="mt-4 space-y-2">
                   {[
-                    { step: 1, label: 'Creating VK account...' },
-                    { step: 2, label: 'Initializing verifying key...' },
-                    { step: 3, label: 'Confirming transaction...' },
+                    { step: 1, label: "Creating VK account..." },
+                    { step: 2, label: "Initializing verifying key..." },
+                    { step: 3, label: "Confirming transaction..." },
                   ].map(({ step, label }) => (
-                    <div key={step} className={`progress-step ${deployStep >= step ? 'completed' : ''}`}>
+                    <div
+                      key={step}
+                      className={`progress-step ${deployStep >= step ? "completed" : ""}`}
+                    >
                       <span className="progress-step-dot"></span>
                       {label}
                     </div>
@@ -639,21 +757,31 @@ export function DemoPage() {
                 <div className="mt-4 p-4 rounded-xl bg-solana-green/10 border border-solana-green/30 deploy-success">
                   <div className="text-solana-green font-semibold mb-2 flex items-center gap-2">
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Deployed!
                   </div>
                   <div className="text-sm space-y-1">
                     <div>
                       <span className="text-gray-500">VK: </span>
-                      <a href={getExplorerAccountUrl(Network.Devnet, vkAccount)} target="_blank" rel="noopener noreferrer" className="tx-link font-mono">
+                      <a
+                        href={getExplorerAccountUrl(Network.Devnet, vkAccount)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tx-link font-mono"
+                      >
                         {truncateAddress(vkAccount)}
                       </a>
                     </div>
                     {deployTx && (
                       <div>
                         <span className="text-gray-500">Tx: </span>
-                        <a href={getExplorerTxUrl(Network.Devnet, deployTx)} target="_blank" rel="noopener noreferrer" className="tx-link font-mono">
+                        <a
+                          href={getExplorerTxUrl(Network.Devnet, deployTx)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="tx-link font-mono"
+                        >
                           {truncateAddress(deployTx)}
                         </a>
                       </div>
@@ -667,19 +795,31 @@ export function DemoPage() {
             <div className="verify-panel demo-panel opacity-0">
               <h3 className="text-xl font-semibold mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-solana-purple/20 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-solana-purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+                  <svg
+                    className="w-5 h-5 text-solana-purple"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </div>
                 Verify On-Chain
               </h3>
 
               {/* Context */}
-              {vkAccount && proof && verifyStep === 'idle' && !verified && (
+              {vkAccount && proof && verifyStep === "idle" && !verified && (
                 <div className="mb-6 p-4 rounded-xl bg-black/30 border border-white/10">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Verifying claim:</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+                    Verifying claim:
+                  </p>
                   <p className="text-white font-mono text-sm">
-                    "I know a <span className="text-solana-purple">secret</span> whose square equals{' '}
+                    "I know a <span className="text-solana-purple">secret</span> whose square equals{" "}
                     <span className="text-solana-green font-bold">{publicInput}</span>"
                   </p>
                 </div>
@@ -693,15 +833,29 @@ export function DemoPage() {
                 {isVerifying ? (
                   <span className="flex items-center justify-center gap-3">
                     <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="none" opacity="0.3"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round"/>
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        opacity="0.3"
+                      />
+                      <path
+                        d="M12 2a10 10 0 0 1 10 10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeLinecap="round"
+                      />
                     </svg>
                     Verifying...
                   </span>
                 ) : verified ? (
-                  'Verified ✓'
+                  "Verified ✓"
                 ) : (
-                  'Verify Proof On-Chain'
+                  "Verify Proof On-Chain"
                 )}
               </button>
 
@@ -709,7 +863,7 @@ export function DemoPage() {
               {isVerifying && (
                 <div className="mt-4 space-y-2">
                   {VERIFY_STEPS.map((step, i) => {
-                    const currentIdx = VERIFY_STEPS.findIndex(s => s.id === verifyStep);
+                    const currentIdx = VERIFY_STEPS.findIndex((s) => s.id === verifyStep);
                     const isActive = step.id === verifyStep;
                     const isComplete = currentIdx > i;
 
@@ -717,23 +871,33 @@ export function DemoPage() {
                       <div
                         key={step.id}
                         className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
-                          isActive ? 'bg-solana-purple/20 border border-solana-purple/50' :
-                          isComplete ? 'bg-solana-green/10' :
-                          'opacity-40'
+                          isActive
+                            ? "bg-solana-purple/20 border border-solana-purple/50"
+                            : isComplete
+                              ? "bg-solana-green/10"
+                              : "opacity-40"
                         }`}
                       >
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                          isActive ? 'bg-solana-purple text-white animate-pulse' :
-                          isComplete ? 'bg-solana-green text-black' :
-                          'bg-gray-800 text-gray-500'
-                        }`}>
-                          {isComplete ? '✓' : step.icon}
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                            isActive
+                              ? "bg-solana-purple text-white animate-pulse"
+                              : isComplete
+                                ? "bg-solana-green text-black"
+                                : "bg-gray-800 text-gray-500"
+                          }`}
+                        >
+                          {isComplete ? "✓" : step.icon}
                         </span>
-                        <span className={`text-sm ${
-                          isActive ? 'text-white' :
-                          isComplete ? 'text-solana-green' :
-                          'text-gray-500'
-                        }`}>
+                        <span
+                          className={`text-sm ${
+                            isActive
+                              ? "text-white"
+                              : isComplete
+                                ? "text-solana-green"
+                                : "text-gray-500"
+                          }`}
+                        >
                           {step.label}
                           {isActive && <span className="verify-dots ml-1"></span>}
                         </span>
@@ -748,7 +912,10 @@ export function DemoPage() {
                 <div className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm verify-error">
                   {verifyError}
                   <button
-                    onClick={() => { setVerifyStep('idle'); setVerifyError(null); }}
+                    onClick={() => {
+                      setVerifyStep("idle");
+                      setVerifyError(null);
+                    }}
                     className="block mt-2 text-xs underline hover:text-red-300"
                   >
                     Try again
@@ -757,16 +924,31 @@ export function DemoPage() {
               )}
 
               {/* Verify success */}
-              {verified && verifyStep === 'verified' && (
+              {verified && verifyStep === "verified" && (
                 <div className="mt-6 text-center">
                   <svg className="final-checkmark w-16 h-16 mx-auto mb-4" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" stroke="#14F195" strokeWidth="2" fill="none" opacity="0.3"/>
-                    <path d="M30 52 L44 66 L72 38" stroke="#14F195" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      stroke="#14F195"
+                      strokeWidth="2"
+                      fill="none"
+                      opacity="0.3"
+                    />
+                    <path
+                      d="M30 52 L44 66 L72 38"
+                      stroke="#14F195"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
                   </svg>
 
                   <div className="verified-badge inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-solana-green/10 border border-solana-green/30 text-solana-green font-semibold mb-4">
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Verified on Solana
                   </div>
@@ -787,13 +969,13 @@ export function DemoPage() {
               )}
 
               {/* Idle message */}
-              {verifyStep === 'idle' && !verified && !verifyError && (
+              {verifyStep === "idle" && !verified && !verifyError && (
                 <p className="text-gray-500 text-sm mt-4 text-center">
                   {!vkAccount
-                    ? 'Deploy the VK account first'
+                    ? "Deploy the VK account first"
                     : !proof
-                    ? 'Generate a proof first'
-                    : 'Click to verify your proof on Solana devnet'}
+                      ? "Generate a proof first"
+                      : "Click to verify your proof on Solana devnet"}
                 </p>
               )}
             </div>

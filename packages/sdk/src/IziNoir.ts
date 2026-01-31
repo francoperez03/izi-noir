@@ -597,6 +597,22 @@ export class IziNoir {
 
     const connection = new Connection(networkConfig.rpcUrl, 'confirmed');
 
+    // Validate VK account exists and has data
+    const vkPubkey = new PublicKey(vk);
+    const accountInfo = await connection.getAccountInfo(vkPubkey);
+    if (!accountInfo) {
+      throw new Error(
+        `VK account ${vk} does not exist on ${this._network}. ` +
+        `Did deploy() succeed? Check the account on explorer: ${getExplorerAccountUrl(this._network, vk)}`
+      );
+    }
+    if (accountInfo.data.length < 8) {
+      throw new Error(
+        `VK account ${vk} has invalid data (${accountInfo.data.length} bytes). ` +
+        `Expected at least 8 bytes for a valid account.`
+      );
+    }
+
     // Build verify instruction
     const builder = new SolanaTransactionBuilder({
       programId: networkConfig.programId,
@@ -633,15 +649,65 @@ export class IziNoir {
     tx.recentBlockhash = blockhash;
     tx.feePayer = new PublicKey(wallet.publicKey.toBase58());
 
+    // Simulate transaction first to catch detailed errors
+    try {
+      const simulation = await connection.simulateTransaction(tx);
+      if (simulation.value.err) {
+        const logs = simulation.value.logs?.join('\n') || 'No logs available';
+        throw new Error(
+          `Transaction simulation failed:\n` +
+          `Error: ${JSON.stringify(simulation.value.err)}\n` +
+          `Logs:\n${logs}`
+        );
+      }
+    } catch (simError) {
+      // If it's already our formatted error, rethrow
+      if (simError instanceof Error && simError.message.includes('Transaction simulation failed')) {
+        throw simError;
+      }
+      // Otherwise wrap with context
+      const err = simError as Error;
+      throw new Error(
+        `Failed to simulate transaction: ${err.message}\n` +
+        `VK Account: ${vk}\n` +
+        `Network: ${this._network}\n` +
+        `Proof size: ${proofData.proof.bytes.length} bytes\n` +
+        `Public inputs: ${proofData.publicInputs.hex.length} items`
+      );
+    }
+
     // Send transaction
-    const signature = await wallet.sendTransaction(tx, connection);
+    let signature: string;
+    try {
+      signature = await wallet.sendTransaction(tx, connection);
+    } catch (sendError) {
+      const originalError = sendError as Error;
+      const enhancedError = new Error(
+        `Failed to send verify transaction: ${originalError.message}\n` +
+        `VK Account: ${vk}\n` +
+        `Network: ${this._network}\n` +
+        `Proof size: ${proofData.proof.bytes.length} bytes\n` +
+        `Public inputs: ${proofData.publicInputs.hex.length} items`
+      );
+      (enhancedError as unknown as { cause: Error }).cause = originalError;
+      throw enhancedError;
+    }
 
     // Confirm transaction
-    await connection.confirmTransaction({
-      signature,
-      blockhash,
-      lastValidBlockHeight,
-    });
+    try {
+      await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      });
+    } catch (confirmError) {
+      const err = confirmError as Error;
+      throw new Error(
+        `Transaction sent but confirmation failed: ${err.message}\n` +
+        `Signature: ${signature}\n` +
+        `Check on explorer: ${getExplorerTxUrl(this._network, signature)}`
+      );
+    }
 
     return {
       verified: true,

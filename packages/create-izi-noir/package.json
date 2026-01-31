@@ -1,6 +1,6 @@
 {
   "name": "create-izi-noir",
-  "version": "0.2.6",
+  "version": "0.2.11",
   "description": "CLI to scaffold IZI-NOIR ZK projects",
   "type": "module",
   "bin": {
@@ -41,7 +41,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/izi-noir/izi-noir.git",
+    "url": "https://github.com/izi-noir.git",
     "directory": "packages/create-izi-noir"
   }
 }

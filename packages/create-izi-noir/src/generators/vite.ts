@@ -140,7 +140,7 @@ export function generateAppTsx(options: ProjectOptions): string {
   const solanaImports = isSolana ? `
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { Chain, Network } from '@izi-noir/sdk';` : '';
+import { Chain, Network, getExplorerTxUrl, getExplorerAccountUrl } from '@izi-noir/sdk';` : '';
 
   const solanaHooks = isSolana ? `
   const { publicKey, connected, sendTransaction } = useWallet();
@@ -154,12 +154,25 @@ import { Chain, Network } from '@izi-noir/sdk';` : '';
   // Deploy state
   const [isDeploying, setIsDeploying] = useState(false);
   const [vkAccount, setVkAccount] = useState<string | null>(null);
+  const [deployTx, setDeployTx] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
 
   // Verify state
   const [isVerifying, setIsVerifying] = useState(false);
   const [verified, setVerified] = useState<boolean | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);` : '';
+
+  const solanaCircuitResetCode = isSolana ? `
+      // Reset deploy state when circuit changes (VK will be different)
+      setVkAccount(null);
+      setDeployTx(null);
+      setVerified(null);` : '';
+
+  const solanaRecompileResetCode = isSolana ? `
+        // Reset deploy state since VK will change with recompilation
+        setVkAccount(null);
+        setDeployTx(null);
+        setVerified(null);` : '';
 
   const solanaHandlers = isSolana ? `
   // Deploy VK to Solana
@@ -172,6 +185,7 @@ import { Chain, Network } from '@izi-noir/sdk';` : '';
     try {
       const result = await iziInstance.deploy({ publicKey, sendTransaction });
       setVkAccount(result.vkAccount);
+      setDeployTx(result.signature);
     } catch (error) {
       console.error('Deploy error:', error);
       setDeployError((error as Error).message);
@@ -191,12 +205,24 @@ import { Chain, Network } from '@izi-noir/sdk';` : '';
       const result = await iziInstance.verifyOnChain({ publicKey, sendTransaction }, vkAccount);
       setVerified(result.verified);
     } catch (error) {
-      console.error('Verify error:', error);
-      setVerifyError((error as Error).message);
+      const err = error as Error;
+      console.error('Verify error details:', {
+        message: err.message,
+        cause: (err as unknown as { cause?: unknown }).cause,
+        stack: err.stack,
+      });
+      setVerifyError(err.message);
     } finally {
       setIsVerifying(false);
     }
   };` : '';
+
+  const solanaVkWarning = isSolana ? `
+          {vkAccount && compiledNoirCode !== noirCode && (
+            <div className="warning">
+              Circuit code changed. Generating a new proof will require re-deploying the VK.
+            </div>
+          )}` : '';
 
   const solanaDeploySection = isSolana ? `
         {/* Deploy & Verify Section */}
@@ -219,21 +245,62 @@ import { Chain, Network } from '@izi-noir/sdk';` : '';
                     {isDeploying ? 'Deploying...' : vkAccount ? 'Deployed' : 'Deploy VK'}
                   </button>
                   {deployError && <p className="error">{deployError}</p>}
-                  {vkAccount && <p className="success">VK: {vkAccount.slice(0, 8)}...</p>}
+                  {vkAccount && (
+                    <div className="deploy-result">
+                      <div className="deploy-result-item">
+                        <span className="deploy-label">VK Account:</span>
+                        <a
+                          href={getExplorerAccountUrl(Network.Devnet, vkAccount)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="explorer-link"
+                        >
+                          {vkAccount}
+                        </a>
+                      </div>
+                      {deployTx && (
+                        <div className="deploy-result-item">
+                          <span className="deploy-label">Transaction:</span>
+                          <a
+                            href={getExplorerTxUrl(Network.Devnet, deployTx)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="explorer-link"
+                          >
+                            {deployTx}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="verify-box">
-                  {publicInputs && (
-                    <div className="public-inputs-display">
-                      <span>Public inputs:</span>
-                      <code>{JSON.stringify(publicInputs)}</code>
+                  {publicInputs && publicInputs.length > 0 && (
+                    <div className="claim-card">
+                      <p className="claim-label">Verifying claim:</p>
+                      <div className="claim-content">
+                        <p className="claim-text">
+                          "I know private values that satisfy the circuit constraints with these public inputs:"
+                        </p>
+                        <div className="public-inputs-grid">
+                          {publicInputs.map((hex, idx) => {
+                            const decimal = BigInt(hex).toString();
+                            return (
+                              <div key={idx} className="public-input-card">
+                                <span className="input-badge public">public</span>
+                                <span className="public-input-value">{decimal}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   )}
                   <button
                     onClick={handleVerify}
                     disabled={!vkAccount || isVerifying}
                     className="btn btn-primary"
-                    style={{ marginTop: publicInputs ? '0.5rem' : 0 }}
                   >
                     {isVerifying ? 'Verifying...' : verified ? 'Verified!' : 'Verify On-Chain'}
                   </button>
@@ -304,8 +371,9 @@ function App() {
   const [localVerified, setLocalVerified] = useState<boolean | null>(null);
   const [publicInputs, setPublicInputs] = useState<string[] | null>(null);
 
-  // IziNoir instance
+  // IziNoir instance and compiled code tracking
   const [iziInstance, setIziInstance] = useState<IziNoir | null>(null);
+  const [compiledNoirCode, setCompiledNoirCode] = useState<string | null>(null);
 ${solanaHooks}
 ${solanaState}
 
@@ -321,6 +389,9 @@ ${solanaState}
       setLocalVerified(null);
       setPublicInputs(null);
       setNoirCode(null);
+      // Reset compiled instance (forces recompilation)
+      setIziInstance(null);
+      setCompiledNoirCode(null);${solanaCircuitResetCode}
     }
   }, [selectedCircuit]);
 
@@ -368,14 +439,21 @@ ${solanaState}
 
       const startTime = performance.now();
 
-      const izi = await IziNoir.init({
-        provider: Provider.${capitalizeFirst(options.provider)},${solanaProviderConfig}
-      });
+      // Reuse existing instance if circuit hasn't changed
+      let izi = iziInstance;
+      const needsRecompile = !izi || compiledNoirCode !== noirCode;
 
-      await izi.compile(noirCode);
+      if (needsRecompile) {
+        izi = await IziNoir.init({
+          provider: Provider.${capitalizeFirst(options.provider)},${solanaProviderConfig}
+        });
 
-      const proofResult = await izi.prove(inputs);
-      setIziInstance(izi);
+        await izi.compile(noirCode);
+        setIziInstance(izi);
+        setCompiledNoirCode(noirCode);${solanaRecompileResetCode}
+      }
+
+      const proofResult = await izi!.prove(inputs);
 
       // Get proof bytes
       const proofBytes = 'bytes' in proofResult.proof
@@ -386,7 +464,7 @@ ${solanaState}
         : proofResult.publicInputs;
 
       // Local verification
-      const verified = await izi.verify(proofBytes, publicInputsHex);
+      const verified = await izi!.verify(proofBytes, publicInputsHex);
       setLocalVerified(verified);
 
       const endTime = performance.now();
@@ -399,7 +477,7 @@ ${solanaState}
     } finally {
       setIsGenerating(false);
     }
-  }, [noirCode, inputs]);
+  }, [noirCode, inputs, iziInstance, compiledNoirCode]);
 ${solanaHandlers}
 
   return (
@@ -471,7 +549,7 @@ ${solanaHandlers}
 
         {/* Generate Proof */}
         <div className="section">
-          <h2>4. Generate Proof</h2>
+          <h2>4. Generate Proof</h2>${solanaVkWarning}
           <button
             onClick={handleGenerateProof}
             disabled={isGenerating || !noirCode || !!transpileError}
@@ -505,7 +583,7 @@ ${solanaDeploySection}
       </main>
 
       <footer>
-        <p>Built with <a href="https://github.com/izi-noir/izi-noir" target="_blank">IZI-NOIR</a></p>
+        <p>Built with <a href="https://github.com/izi-noir" target="_blank">IZI-NOIR</a></p>
       </footer>
     </div>
   );
@@ -902,6 +980,16 @@ main {
   border-radius: 8px;
 }
 
+.warning {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  color: #ffc107;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
 /* ================================
    Noir Code Details
    ================================ */
@@ -959,22 +1047,138 @@ main {
 }
 
 .public-inputs-display {
-  margin-top: 0.75rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  margin-bottom: 1rem;
 }
 
-.public-inputs-display code {
+.public-inputs-label {
   display: block;
-  margin-top: 0.5rem;
-  padding: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.public-inputs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.public-input-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
+  transition: border-color 0.3s ease;
+}
+
+.public-input-item:hover {
+  border-color: rgba(20, 241, 149, 0.3);
+}
+
+.public-input-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  overflow-x: auto;
-  max-width: 100%;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ================================
+   Claim Card - Public Inputs Display
+   ================================ */
+.claim-card {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(20, 241, 149, 0.05);
+  border: 1px solid rgba(20, 241, 149, 0.2);
+  border-radius: 12px;
+}
+
+.claim-label {
+  font-size: 0.75rem;
+  color: var(--solana-green);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.claim-content {
+  padding: 0.5rem 0;
+}
+
+.claim-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.public-inputs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.public-input-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(20, 241, 149, 0.3);
+  border-radius: 12px;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.public-input-card:hover {
+  border-color: var(--solana-green);
+  transform: translateY(-2px);
+}
+
+.deploy-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(20, 241, 149, 0.05);
+  border: 1px solid rgba(20, 241, 149, 0.2);
+  border-radius: 8px;
+}
+
+.deploy-result-item {
+  margin-bottom: 0.75rem;
+}
+
+.deploy-result-item:last-child {
+  margin-bottom: 0;
+}
+
+.deploy-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.explorer-link {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--solana-green);
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.3s ease;
+}
+
+.explorer-link:hover {
+  color: var(--solana-purple);
+  text-decoration: underline;
 }
 
 /* ================================

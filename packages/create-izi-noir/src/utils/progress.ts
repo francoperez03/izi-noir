@@ -50,7 +50,8 @@ export class ProgressReporter {
       const frame = pc.cyan(frames[frameIndex]);
       const phrase = THINKING_PHRASES[this.thinkingIndex % THINKING_PHRASES.length];
       const dots = '.'.repeat(dotCount % 4);
-      process.stdout.write(`\r${frame} ${pc.dim(phrase)}${dots}   `);
+      // \x1B[2K clears the entire line, \r returns cursor to start
+      process.stdout.write(`\x1B[2K\r${frame} ${pc.dim(phrase)}${dots}`);
       frameIndex = (frameIndex + 1) % frames.length;
       dotCount++;
 
@@ -130,8 +131,9 @@ export class InstallProgress {
       const bar = pc.green('█'.repeat(filled)) + pc.dim('░'.repeat(empty));
       const pkg = this.packages[this.currentPackage % this.packages.length];
 
+      // \x1B[2K clears the entire line, \r returns cursor to start
       process.stdout.write(
-        `\r${frame} Installing dependencies ${bar} ${pc.dim(pkg)}   `
+        `\x1B[2K\r${frame} Installing dependencies ${bar} ${pc.dim(pkg)}`
       );
 
       frameIndex = (frameIndex + 1) % frames.length;
@@ -187,7 +189,8 @@ export class GitProgress {
       const phase = this.phases[this.phaseIndex % this.phases.length];
       const dots = '.'.repeat(this.dotCount % 4);
 
-      process.stdout.write(`\r${frame} ${pc.dim(phase)}${dots}   `);
+      // \x1B[2K clears the entire line, \r returns cursor to start
+      process.stdout.write(`\x1B[2K\r${frame} ${pc.dim(phase)}${dots}`);
 
       frameIndex = (frameIndex + 1) % frames.length;
       this.dotCount++;

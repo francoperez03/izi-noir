@@ -8,7 +8,7 @@ export function generateReadme(options: ProjectOptions): string {
 
   return `# ${options.projectName}
 
-ZK proof demo built with [IZI-NOIR](https://github.com/izi-noir/izi-noir) and React.
+ZK proof demo built with [IZI-NOIR](https://github.com/izi-noir) and React.
 
 ## Getting Started
 
@@ -68,7 +68,7 @@ After adding a new circuit:
 
 ## Learn More
 
-- [IZI-NOIR Documentation](https://github.com/izi-noir/izi-noir)
+- [IZI-NOIR Documentation](https://github.com/izi-noir)
 - [Noir Language](https://noir-lang.org)
 - [Vite](https://vitejs.dev)
 - [React](https://react.dev)

@@ -1,5 +1,5 @@
 import path from 'path';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import pc from 'picocolors';
 import { promptProjectOptions, type ProjectOptions } from '../prompts/project.js';
 import { writeFile, directoryExists, isDirectoryEmpty, ensureDir } from '../utils/fs.js';
@@ -125,13 +125,27 @@ export async function initCommand(
     installProgress.start();
 
     try {
-      execSync('npm install', { cwd: projectDir, stdio: 'ignore' });
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn('npm', ['install'], {
+          cwd: projectDir,
+          stdio: 'ignore',
+          shell: true,
+        });
+        child.on('close', (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`npm install exited with code ${code}`));
+        });
+        child.on('error', reject);
+      });
       installProgress.stop(true);
     } catch {
       installProgress.stop(false);
       console.log(pc.yellow('  Run "npm install" manually.'));
     }
   }
+
+  // Ensure cursor is visible before final message
+  process.stdout.write('\x1B[?25h');
 
   // Print success message
   printSuccessMessage(projectOptions);
@@ -239,7 +253,7 @@ function printSuccessMessage(options: ProjectOptions): void {
   console.log(pc.dim('  3. Add it to CIRCUITS array in src/App.tsx'));
   console.log();
   console.log(
-    pc.dim('Learn more: ') + pc.blue('https://github.com/izi-noir/izi-noir')
+    pc.dim('Learn more: ') + pc.blue('https://github.com/izi-noir')
   );
   console.log();
 }
