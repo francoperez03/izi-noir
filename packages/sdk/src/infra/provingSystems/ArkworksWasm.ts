@@ -459,10 +459,22 @@ authors = [""]
     }
 
     // Generate proof using R1CS
+    const toHex = (arr: Uint8Array) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log('=== ARKWORKS PROVE DEBUG ===');
+    console.log('Witness JSON:', witnessJson);
+    console.log('R1CS JSON:', circuit.r1csJson);
+
     const proofResult = wasm.prove_from_r1cs(provingKey, circuit.r1csJson, witnessJson);
+
+    console.log('Proof result public_inputs:', proofResult.public_inputs);
+    console.log('Proof gnark base64 length:', proofResult.proof_gnark.length);
 
     // Return proof in gnark format for Solana compatibility
     const proofBytes = base64ToUint8Array(proofResult.proof_gnark);
+
+    console.log('Proof bytes length:', proofBytes.length);
+    console.log('Proof bytes hex:', toHex(proofBytes));
+    console.log('============================');
 
     return {
       proof: proofBytes,

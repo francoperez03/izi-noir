@@ -4,7 +4,7 @@ export function generatePackageJson(options: ProjectOptions): string {
   const isSolana = options.provider === 'arkworks';
 
   const dependencies: Record<string, string> = {
-    '@izi-noir/sdk': '^0.1.6',
+    '@izi-noir/sdk': '^0.1.10',
     '@noir-lang/acvm_js': '1.0.0-beta.13-1d260df.nightly',
     '@noir-lang/noirc_abi': '1.0.0-beta.13-1d260df.nightly',
     'react': '^18.3.1',

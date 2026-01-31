@@ -611,9 +611,9 @@ function getCircuitOptions(template: string): string {
   {
     name: 'myCircuit',
     fn: myCircuit,
-    publicInputKeys: ['publicInput'],
-    privateInputKeys: ['privateInput'],
-    defaultInputs: { publicInput: '42', privateInput: '42' },
+    publicInputKeys: ['expected'],
+    privateInputKeys: ['secret'],
+    defaultInputs: { expected: '49', secret: '7' },
   },
 ]`;
     case 'balance-proof':
@@ -621,9 +621,9 @@ function getCircuitOptions(template: string): string {
   {
     name: 'balanceProof',
     fn: balanceProof,
-    publicInputKeys: ['threshold'],
-    privateInputKeys: ['balance'],
-    defaultInputs: { threshold: '100', balance: '1500' },
+    publicInputKeys: ['expected'],
+    privateInputKeys: ['secret'],
+    defaultInputs: { expected: '49', secret: '7' },
   },
 ]`;
     default:
@@ -631,16 +631,16 @@ function getCircuitOptions(template: string): string {
   {
     name: 'balanceProof',
     fn: balanceProof,
-    publicInputKeys: ['threshold'],
-    privateInputKeys: ['balance'],
-    defaultInputs: { threshold: '100', balance: '1500' },
+    publicInputKeys: ['expected'],
+    privateInputKeys: ['secret'],
+    defaultInputs: { expected: '49', secret: '7' },
   },
   {
     name: 'ageProof',
     fn: ageProof,
-    publicInputKeys: ['currentYear', 'minAge'],
-    privateInputKeys: ['birthYear'],
-    defaultInputs: { currentYear: '2024', minAge: '18', birthYear: '1990' },
+    publicInputKeys: ['expected'],
+    privateInputKeys: ['secret'],
+    defaultInputs: { expected: '16', secret: '4' },
   },
 ]`;
   }

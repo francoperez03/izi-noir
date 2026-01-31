@@ -1,39 +1,41 @@
 export function generateBalanceProof(): string {
   return `/**
- * Balance Proof Circuit
+ * Square Proof Circuit
  *
- * Proves that a private balance is greater than or equal to a public threshold
- * without revealing the actual balance.
+ * Proves knowledge of a secret number whose square equals a public value.
+ * This is a fundamental ZK proof pattern that demonstrates the SDK capabilities.
  *
- * @param threshold - The minimum required balance (public)
- * @param balance - The actual balance to prove (private, not revealed)
+ * Example: To prove you know the secret 7, set expected = 49 (7²)
+ *
+ * @param expected - The expected result (secret²) (public)
+ * @param secret - The secret number to prove (private, not revealed)
  */
 export function balanceProof(
-  [threshold]: [number],
-  [balance]: [number]
+  [expected]: [number],
+  [secret]: [number]
 ): void {
-  assert(balance >= threshold);
+  assert(secret * secret == expected);
 }
 `;
 }
 
 export function generateAgeProof(): string {
   return `/**
- * Age Proof Circuit
+ * Another Square Proof Circuit
  *
- * Proves that a private birth year results in an age >= minimum age
- * without revealing the actual birth year.
+ * Another example proving knowledge of a secret whose square equals a public value.
+ * This demonstrates the same ZK pattern with different default values.
  *
- * @param currentYear - The current year (public)
- * @param minAge - The minimum required age (public)
- * @param birthYear - The actual birth year (private, not revealed)
+ * Example: To prove you know the secret 4, set expected = 16 (4²)
+ *
+ * @param expected - The expected result (secret²) (public)
+ * @param secret - The secret square root to prove (private, not revealed)
  */
 export function ageProof(
-  [currentYear, minAge]: [number, number],
-  [birthYear]: [number]
+  [expected]: [number],
+  [secret]: [number]
 ): void {
-  const age = currentYear - birthYear;
-  assert(age >= minAge);
+  assert(secret * secret == expected);
 }
 `;
 }
@@ -42,18 +44,20 @@ export function generateMinimalCircuit(): string {
   return `/**
  * My Custom Circuit
  *
- * Replace this with your own circuit logic.
- * Use assert() statements to define constraints.
+ * A minimal ZK proof that proves knowledge of a secret whose square
+ * equals the public expected value.
  *
- * @param publicInput - A public input value
- * @param privateInput - A private input value (not revealed)
+ * Replace with your own circuit logic using assert() statements.
+ *
+ * @param expected - The expected result (secret²) (public)
+ * @param secret - The secret value to prove (private, not revealed)
  */
 export function myCircuit(
-  [publicInput]: [number],
-  [privateInput]: [number]
+  [expected]: [number],
+  [secret]: [number]
 ): void {
-  // Example: prove that private input equals public input
-  assert(privateInput === publicInput);
+  // Prove that secret² = expected
+  assert(secret * secret == expected);
 }
 `;
 }

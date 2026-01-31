@@ -493,6 +493,18 @@ export class IziNoir {
     const vkKeypair = Keypair.generate();
     const authority = wallet.publicKey;
 
+    // DEBUG: Log VK data being deployed
+    const toHex = (arr: Uint8Array) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log('=== DEPLOY VK DEBUG ===');
+    console.log('VK nrPublicInputs:', proofData.verifyingKey.nrPublicInputs);
+    console.log('VK bytes length:', proofData.verifyingKey.bytes.length);
+    console.log('VK bytes (first 64 - alpha_g1):', toHex(proofData.verifyingKey.bytes.slice(0, 64)));
+    console.log('VK bytes (64-192 - beta_g2):', toHex(proofData.verifyingKey.bytes.slice(64, 192)));
+    console.log('VK bytes (192-320 - gamma_g2):', toHex(proofData.verifyingKey.bytes.slice(192, 320)));
+    console.log('VK bytes (320-448 - delta_g2):', toHex(proofData.verifyingKey.bytes.slice(320, 448)));
+    console.log('VK bytes (448+ - k elements):', toHex(proofData.verifyingKey.bytes.slice(448)));
+    console.log('=======================');
+
     // Build transaction using SolanaTransactionBuilder
     const builder = new SolanaTransactionBuilder({
       programId: networkConfig.programId,
@@ -612,6 +624,24 @@ export class IziNoir {
         `Expected at least 8 bytes for a valid account.`
       );
     }
+
+    // DEBUG: Log proof data being sent
+    const toHex = (arr: Uint8Array) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log('=== VERIFY ON-CHAIN DEBUG ===');
+    console.log('VK Account:', vk);
+    console.log('VK Account data length:', accountInfo.data.length, 'bytes');
+    console.log('Proof size:', proofData.proof.bytes.length, 'bytes');
+    console.log('Proof (first 64 bytes - A point):', toHex(proofData.proof.bytes.slice(0, 64)));
+    console.log('Proof (bytes 64-192 - B point):', toHex(proofData.proof.bytes.slice(64, 192)));
+    console.log('Proof (bytes 192-256 - C point):', toHex(proofData.proof.bytes.slice(192, 256)));
+    console.log('Public inputs count:', proofData.publicInputs.bytes.length);
+    proofData.publicInputs.bytes.forEach((input, i) => {
+      console.log(`  Public input[${i}]:`, toHex(input));
+    });
+    console.log('Public inputs hex:', proofData.publicInputs.hex);
+    console.log('VK nrPublicInputs:', proofData.verifyingKey.nrPublicInputs);
+    console.log('VK bytes length:', proofData.verifyingKey.bytes.length);
+    console.log('=============================');
 
     // Build verify instruction
     const builder = new SolanaTransactionBuilder({
