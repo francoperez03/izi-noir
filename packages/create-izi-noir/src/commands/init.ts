@@ -13,7 +13,7 @@ import {
   generatePackageJson,
   generateTsconfig,
   generateBalanceProof,
-  generateAgeProof,
+  generateSquareProof,
   generateMinimalCircuit,
   generateCircuitsIndex,
   generateCircuitTypes,
@@ -199,7 +199,7 @@ async function createProjectStructure(
       break;
     default:
       files.push(['circuits/balance-proof.ts', generateBalanceProof()]);
-      files.push(['circuits/age-proof.ts', generateAgeProof()]);
+      files.push(['circuits/square-proof.ts', generateSquareProof()]);
       break;
   }
 

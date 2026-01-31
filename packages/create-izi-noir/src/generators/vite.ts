@@ -160,7 +160,9 @@ import { Chain, Network, getExplorerTxUrl, getExplorerAccountUrl } from '@izi-no
   // Verify state
   const [isVerifying, setIsVerifying] = useState(false);
   const [verified, setVerified] = useState<boolean | null>(null);
-  const [verifyError, setVerifyError] = useState<string | null>(null);` : '';
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifyTxSignature, setVerifyTxSignature] = useState<string | null>(null);
+  const [verifyExplorerUrl, setVerifyExplorerUrl] = useState<string | null>(null);` : '';
 
   const solanaCircuitResetCode = isSolana ? `
       // Reset deploy state when circuit changes (VK will be different)
@@ -200,10 +202,14 @@ import { Chain, Network, getExplorerTxUrl, getExplorerAccountUrl } from '@izi-no
 
     setIsVerifying(true);
     setVerifyError(null);
+    setVerifyTxSignature(null);
+    setVerifyExplorerUrl(null);
 
     try {
       const result = await iziInstance.verifyOnChain({ publicKey, sendTransaction }, vkAccount);
       setVerified(result.verified);
+      setVerifyTxSignature(result.signature);
+      setVerifyExplorerUrl(result.explorerUrl);
     } catch (error) {
       const err = error as Error;
       console.error('Verify error details:', {
@@ -305,7 +311,21 @@ import { Chain, Network, getExplorerTxUrl, getExplorerAccountUrl } from '@izi-no
                     {isVerifying ? 'Verifying...' : verified ? 'Verified!' : 'Verify On-Chain'}
                   </button>
                   {verifyError && <p className="error">{verifyError}</p>}
-                  {verified && <p className="success">Proof verified on Solana!</p>}
+                  {verified && (
+                    <div className="success-box">
+                      <p className="success">✓ Proof verified on Solana!</p>
+                      {verifyTxSignature && (
+                        <p className="tx-info">
+                          Tx: <code>{verifyTxSignature.slice(0, 8)}...{verifyTxSignature.slice(-8)}</code>
+                          {verifyExplorerUrl && (
+                            <a href={verifyExplorerUrl} target="_blank" rel="noopener noreferrer" className="explorer-link">
+                              View on Explorer →
+                            </a>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -323,6 +343,7 @@ import {
   markWasmInitialized,
   AcornParser,
   generateNoir,
+  type ParsedCircuit,
 } from '@izi-noir/sdk';${solanaImports}
 import { CodeBlock } from './components/CodeBlock';
 ${circuitImports}
@@ -374,6 +395,7 @@ function App() {
   // IziNoir instance and compiled code tracking
   const [iziInstance, setIziInstance] = useState<IziNoir | null>(null);
   const [compiledNoirCode, setCompiledNoirCode] = useState<string | null>(null);
+  const [parsedCircuit, setParsedCircuit] = useState<ParsedCircuit | null>(null);
 ${solanaHooks}
 ${solanaState}
 
@@ -391,7 +413,8 @@ ${solanaState}
       setNoirCode(null);
       // Reset compiled instance (forces recompilation)
       setIziInstance(null);
-      setCompiledNoirCode(null);${solanaCircuitResetCode}
+      setCompiledNoirCode(null);
+      setParsedCircuit(null);${solanaCircuitResetCode}
     }
   }, [selectedCircuit]);
 
@@ -411,9 +434,10 @@ ${solanaState}
           .filter(([key]) => circuit.privateInputKeys.includes(key))
           .map(([, val]) => Number(val));
 
-        const parsedCircuit = parser.parse(circuit.fn, publicInputs, privateInputs);
-        const result = generateNoir(parsedCircuit);
+        const parsed = parser.parse(circuit.fn, publicInputs, privateInputs);
+        const result = generateNoir(parsed);
         setNoirCode(result);
+        setParsedCircuit(parsed);
       } catch (error) {
         setTranspileError((error as Error).message);
         setNoirCode(null);
@@ -448,7 +472,8 @@ ${solanaState}
           provider: Provider.${capitalizeFirst(options.provider)},${solanaProviderConfig}
         });
 
-        await izi.compile(noirCode);
+        // Pass parsedCircuit for dynamic R1CS generation
+        await izi.compile(noirCode, parsedCircuit ? { parsedCircuit } : undefined);
         setIziInstance(izi);
         setCompiledNoirCode(noirCode);${solanaRecompileResetCode}
       }
@@ -477,7 +502,7 @@ ${solanaState}
     } finally {
       setIsGenerating(false);
     }
-  }, [noirCode, inputs, iziInstance, compiledNoirCode]);
+  }, [noirCode, inputs, iziInstance, compiledNoirCode, parsedCircuit]);
 ${solanaHandlers}
 
   return (
@@ -600,7 +625,7 @@ function getCircuitImports(template: string): string {
     case 'balance-proof':
       return `import { balanceProof } from '../circuits';`;
     default:
-      return `import { balanceProof, ageProof } from '../circuits';`;
+      return `import { balanceProof, squareProof } from '../circuits';`;
   }
 }
 
@@ -621,9 +646,9 @@ function getCircuitOptions(template: string): string {
   {
     name: 'balanceProof',
     fn: balanceProof,
-    publicInputKeys: ['expected'],
-    privateInputKeys: ['secret'],
-    defaultInputs: { expected: '49', secret: '7' },
+    publicInputKeys: ['threshold'],
+    privateInputKeys: ['balance'],
+    defaultInputs: { threshold: '500', balance: '1000' },
   },
 ]`;
     default:
@@ -631,16 +656,16 @@ function getCircuitOptions(template: string): string {
   {
     name: 'balanceProof',
     fn: balanceProof,
+    publicInputKeys: ['threshold'],
+    privateInputKeys: ['balance'],
+    defaultInputs: { threshold: '500', balance: '1000' },
+  },
+  {
+    name: 'squareProof',
+    fn: squareProof,
     publicInputKeys: ['expected'],
     privateInputKeys: ['secret'],
     defaultInputs: { expected: '49', secret: '7' },
-  },
-  {
-    name: 'ageProof',
-    fn: ageProof,
-    publicInputKeys: ['expected'],
-    privateInputKeys: ['secret'],
-    defaultInputs: { expected: '16', secret: '4' },
   },
 ]`;
   }
@@ -973,11 +998,45 @@ main {
 .success {
   color: var(--solana-green);
   font-size: 0.875rem;
+  margin: 0;
+}
+
+.success-box {
   margin-top: 0.5rem;
   padding: 0.75rem 1rem;
   background: rgba(20, 241, 149, 0.1);
   border: 1px solid rgba(20, 241, 149, 0.2);
   border-radius: 8px;
+}
+
+.tx-info {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tx-info code {
+  font-family: 'Fira Code', 'SF Mono', Monaco, monospace;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.explorer-link {
+  color: var(--solana-purple);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.explorer-link:hover {
+  color: var(--solana-green);
+  text-decoration: underline;
 }
 
 .warning {

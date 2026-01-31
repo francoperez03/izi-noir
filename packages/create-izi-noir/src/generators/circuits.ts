@@ -1,37 +1,37 @@
 export function generateBalanceProof(): string {
   return `/**
- * Square Proof Circuit
+ * Balance Proof Circuit
  *
- * Proves knowledge of a secret number whose square equals a public value.
- * This is a fundamental ZK proof pattern that demonstrates the SDK capabilities.
+ * Proves you have enough balance to cover a required amount.
+ * This is a real-world use case: proving solvency without revealing your actual balance.
  *
- * Example: To prove you know the secret 7, set expected = 49 (7²)
+ * Example: Prove balance=1000 >= threshold=500
  *
- * @param expected - The expected result (secret²) (public)
- * @param secret - The secret number to prove (private, not revealed)
+ * @param threshold - The minimum required amount (public)
+ * @param balance - Your actual balance (private, not revealed)
  */
 export function balanceProof(
-  [expected]: [number],
-  [secret]: [number]
+  [threshold]: [number],
+  [balance]: [number]
 ): void {
-  assert(secret * secret == expected);
+  assert(balance >= threshold);
 }
 `;
 }
 
-export function generateAgeProof(): string {
+export function generateSquareProof(): string {
   return `/**
- * Another Square Proof Circuit
+ * Square Proof Circuit
  *
- * Another example proving knowledge of a secret whose square equals a public value.
- * This demonstrates the same ZK pattern with different default values.
+ * Proves knowledge of a secret number whose square equals a public value.
+ * This is a fundamental ZK proof pattern.
  *
- * Example: To prove you know the secret 4, set expected = 16 (4²)
+ * Example: To prove you know the secret 7, set expected = 49 (7²)
  *
  * @param expected - The expected result (secret²) (public)
  * @param secret - The secret square root to prove (private, not revealed)
  */
-export function ageProof(
+export function squareProof(
   [expected]: [number],
   [secret]: [number]
 ): void {
@@ -72,7 +72,7 @@ export function generateCircuitsIndex(template: string): string {
 `;
     default:
       return `export { balanceProof } from './balance-proof.js';
-export { ageProof } from './age-proof.js';
+export { squareProof } from './square-proof.js';
 `;
   }
 }

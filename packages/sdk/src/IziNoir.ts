@@ -14,6 +14,8 @@ import type {
   VerifyingKeyData,
   CompileResult,
 } from './domain/types.js';
+import type { ParsedCircuit } from './domain/entities/circuit.js';
+import type { CompileOptions } from './domain/interfaces/proving/ICompiler.js';
 import type { IChainFormatter } from './domain/interfaces/chain/IChainFormatter.js';
 import type { ChainId, CircuitMetadata } from './domain/types/chain.js';
 import { initNoirWasm } from './infra/wasm/wasmInit.js';
@@ -217,16 +219,20 @@ export class IziNoir {
    * After compile(), the verifying key is available via `this.vk`.
    *
    * @param noirCode - The Noir source code to compile
+   * @param options - Optional compilation options including ParsedCircuit for dynamic R1CS
    * @returns CompileResult with circuit and verifying key
    *
    * @example
    * ```typescript
+   * // Basic usage
    * const { circuit, verifyingKey } = await izi.compile(noirCode);
-   * console.log('VK:', izi.vk);  // Available immediately after compile
+   *
+   * // With ParsedCircuit for dynamic R1CS generation
+   * const { circuit } = await izi.compile(noirCode, { parsedCircuit });
    * ```
    */
-  async compile(noirCode: string): Promise<CompileResult> {
-    this.compiledCircuit = await this.provingSystem.compile(noirCode);
+  async compile(noirCode: string, options?: CompileOptions): Promise<CompileResult> {
+    this.compiledCircuit = await this.provingSystem.compile(noirCode, options);
 
     // Extract VK from compiled circuit if available (Arkworks does setup during compile)
     const vk = await this.extractVerifyingKey(this.compiledCircuit);

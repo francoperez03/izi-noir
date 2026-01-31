@@ -50,6 +50,10 @@ export type {
   ArkworksProofResult,
 } from './infra/provingSystems/ArkworksWasm.js';
 
+// R1CS Builder (for advanced users who want dynamic R1CS generation)
+export { R1csBuilder } from './infra/provingSystems/R1csBuilder.js';
+export type { R1csConstraint, R1csDefinition } from './infra/provingSystems/R1csBuilder.js';
+
 // Note: Sunspot is Node.js only and NOT exported from the main entry point.
 // Import from '@izi-noir/sdk/sunspot' for Sunspot support.
 
@@ -62,6 +66,7 @@ export type {
   ICompiler,
   IProver,
   IVerifier,
+  CompileOptions,
 } from './domain/interfaces/proving/index.js';
 export type { IParser } from './domain/interfaces/parsing/index.js';
 // Note: IChainFormatter and ChainProofDataFor are exported from IziNoir.js above

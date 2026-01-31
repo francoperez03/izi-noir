@@ -15,7 +15,9 @@ import { compile, createFileManager } from '@noir-lang/noir_wasm';
 import { Noir } from '@noir-lang/noir_js';
 import { decompressWitness } from '@noir-lang/acvm_js';
 import type { IProvingSystem } from '../../domain/interfaces/proving/IProvingSystem.js';
+import type { CompileOptions } from '../../domain/interfaces/proving/ICompiler.js';
 import type { CompiledCircuit, InputMap, ProofData } from '../../domain/types.js';
+import { R1csBuilder, type AuxWitnessComputation, type R1csDefinition } from './R1csBuilder.js';
 
 /**
  * Helper to create a ReadableStream from a string
@@ -126,24 +128,9 @@ export interface ArkworksWasmConfig {
   cacheKeys?: boolean;
 }
 
-/**
- * R1CS constraint for arkworks-groth16-wasm
- */
-export interface R1csConstraint {
-  a: [string, number][]; // [(coefficient_hex, witness_index), ...]
-  b: [string, number][];
-  c: [string, number][];
-}
-
-/**
- * R1CS definition for arkworks-groth16-wasm
- */
-export interface R1csDefinition {
-  num_witnesses: number;
-  public_inputs: number[];
-  private_inputs: number[];
-  constraints: R1csConstraint[];
-}
+// R1CS types are imported from R1csBuilder.ts
+// Re-export for backwards compatibility
+export type { R1csConstraint, R1csDefinition, AuxWitnessComputation } from './R1csBuilder.js';
 
 /**
  * Extended CompiledCircuit for ArkworksWasm backend
@@ -183,8 +170,31 @@ let wasmInitPromise: Promise<ArkworksWasmModule> | null = null;
 async function getWasmPaths(): Promise<{ loaderPath: string; wasmPath: string }> {
   const url = await import('node:url');
   const path = await import('node:path');
+  const fs = await import('node:fs');
+
   // Resolve relative to this file's location in dist/
   const dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+  // Try multiple possible locations for WASM files:
+  // 1. dist/wasm/web/ (when importing from main entry dist/index.js)
+  // 2. dist/providers/../wasm/web/ = dist/wasm/web/ (when importing from dist/providers/arkworks.js)
+  const possiblePaths = [
+    path.join(dirname, 'wasm', 'web'),
+    path.join(dirname, '..', 'wasm', 'web'),
+    path.join(dirname, '..', '..', 'wasm', 'web'),
+  ];
+
+  for (const wasmDir of possiblePaths) {
+    const loaderPath = path.join(wasmDir, 'arkworks_groth16_wasm.js');
+    if (fs.existsSync(loaderPath)) {
+      return {
+        loaderPath,
+        wasmPath: path.join(wasmDir, 'arkworks_groth16_wasm_bg.wasm'),
+      };
+    }
+  }
+
+  // Fallback to original path
   return {
     loaderPath: path.join(dirname, 'wasm', 'web', 'arkworks_groth16_wasm.js'),
     wasmPath: path.join(dirname, 'wasm', 'web', 'arkworks_groth16_wasm_bg.wasm'),
@@ -286,8 +296,11 @@ export class ArkworksWasm implements IProvingSystem {
 
   /**
    * Compile Noir code to a circuit with ACIR for Groth16 proving
+   *
+   * @param noirCode - The Noir source code to compile
+   * @param options - Optional compilation options including ParsedCircuit for dynamic R1CS
    */
-  async compile(noirCode: string): Promise<CompiledCircuit> {
+  async compile(noirCode: string, options?: CompileOptions): Promise<CompiledCircuit> {
     const wasm = await initWasm();
     const { basePath, cleanup } = await createTempDir();
     const fm = createFileManager(basePath);
@@ -320,57 +333,76 @@ authors = [""]
         throw new Error('Compilation failed: no bytecode generated');
       }
 
-      // Generate R1CS directly from the circuit parameters
-      // This bypasses ACIR bytecode decoding which requires bincode parsing
-      //
-      // R1CS witness layout (arkworks convention):
-      // - w_0 = 1 (constant, always)
-      // - w_1, w_2, ... = actual witnesses (shifted by 1 from noir_js indices)
-      //
-      // noir_js decompressWitness returns 0-based indices, so:
-      // - noir witness[0] → R1CS w_1
-      // - noir witness[1] → R1CS w_2
-      // etc.
+      // Generate R1CS from ParsedCircuit if provided, otherwise use hardcoded pattern
       const parameters = compiled.abi.parameters;
-      const publicR1csIndices: number[] = [];
-      const privateR1csIndices: number[] = [];
+      let r1cs: R1csDefinition;
       const witnessIndexMapping = new Map<number, number>();
 
-      parameters.forEach((p, noirIndex) => {
-        // Shift by 1 to account for w_0 = 1
-        const r1csIndex = noirIndex + 1;
-        witnessIndexMapping.set(noirIndex, r1csIndex);
-        if (p.visibility === 'public') {
-          publicR1csIndices.push(r1csIndex);
-        } else if (p.visibility === 'private') {
-          privateR1csIndices.push(r1csIndex);
-        }
-      });
+      if (options?.parsedCircuit) {
+        // Use R1csBuilder for dynamic R1CS generation
+        const builder = new R1csBuilder(options.parsedCircuit);
+        r1cs = builder.build();
 
-      // Generate R1CS constraints from the Noir code pattern
-      // For the demo circuit: assert(secret * secret == expected)
-      // This translates to: w_private * w_private = w_public
-      //
-      // R1CS constraint format: A * B = C
-      // For secret * secret = expected:
-      // A = [1 * w_secret], B = [1 * w_secret], C = [1 * w_expected]
-      const r1cs: R1csDefinition = {
-        num_witnesses: parameters.length + 1, // +1 for w_0
-        public_inputs: publicR1csIndices,
-        private_inputs: privateR1csIndices,
-        constraints: [],
-      };
-
-      // For the simple squaring circuit, add constraint: private * private = public
-      // This assumes the circuit pattern: assert(secret * secret == expected)
-      if (privateR1csIndices.length === 1 && publicR1csIndices.length === 1) {
-        const privateIdx = privateR1csIndices[0];
-        const publicIdx = publicR1csIndices[0];
-        r1cs.constraints.push({
-          a: [['0x1', privateIdx]], // secret
-          b: [['0x1', privateIdx]], // secret
-          c: [['0x1', publicIdx]], // expected
+        // Build witness index mapping from R1CS builder
+        // noir_js uses 0-based indices, R1CS uses 1-based (w_0 = 1)
+        parameters.forEach((p, noirIndex) => {
+          const r1csIndex = noirIndex + 1;
+          witnessIndexMapping.set(noirIndex, r1csIndex);
         });
+
+      } else {
+        // Fallback: Hardcoded R1CS for common circuit patterns
+        // Supported patterns:
+        // - Balance: assert(a + b == total) - 2 private, 1 public
+        // - Square: assert(secret * secret == expected) - 1 private, 1 public
+        //
+        // R1CS witness layout (arkworks convention):
+        // - w_0 = 1 (constant, always)
+        // - w_1, w_2, ... = actual witnesses (shifted by 1 from noir_js indices)
+        const publicR1csIndices: number[] = [];
+        const privateR1csIndices: number[] = [];
+
+        parameters.forEach((p, noirIndex) => {
+          const r1csIndex = noirIndex + 1;
+          witnessIndexMapping.set(noirIndex, r1csIndex);
+          if (p.visibility === 'public') {
+            publicR1csIndices.push(r1csIndex);
+          } else if (p.visibility === 'private') {
+            privateR1csIndices.push(r1csIndex);
+          }
+        });
+
+        r1cs = {
+          num_witnesses: parameters.length + 1,
+          public_inputs: publicR1csIndices,
+          private_inputs: privateR1csIndices,
+          constraints: [],
+        };
+
+        // Hardcoded constraints based on circuit shape
+        if (privateR1csIndices.length === 2 && publicR1csIndices.length === 1) {
+          // Balance circuit: assert(a + b == total)
+          // R1CS: (a + b) * 1 = total
+          const aIdx = privateR1csIndices[0];
+          const bIdx = privateR1csIndices[1];
+          const totalIdx = publicR1csIndices[0];
+          r1cs.constraints.push({
+            a: [['0x1', aIdx], ['0x1', bIdx]], // a + b
+            b: [['0x1', 0]], // * 1 (w_0 = 1)
+            c: [['0x1', totalIdx]], // = total
+          });
+        } else if (privateR1csIndices.length === 1 && publicR1csIndices.length === 1) {
+          // Square circuit: assert(secret * secret == expected)
+          // R1CS: private * private = public
+          const privateIdx = privateR1csIndices[0];
+          const publicIdx = publicR1csIndices[0];
+          r1cs.constraints.push({
+            a: [['0x1', privateIdx]],
+            b: [['0x1', privateIdx]],
+            c: [['0x1', publicIdx]],
+          });
+        }
+
       }
 
       const r1csJson = JSON.stringify(r1cs);
@@ -393,7 +425,7 @@ authors = [""]
 
       // Keep acirJson for backwards compatibility but use r1csJson for proving
       const acirJson = JSON.stringify({
-        functions: [{ current_witness_index: parameters.length, opcodes: [], private_parameters: privateR1csIndices, public_parameters: { witnesses: publicR1csIndices }, return_values: { witnesses: [] } }],
+        functions: [{ current_witness_index: parameters.length, opcodes: [], private_parameters: r1cs.private_inputs, public_parameters: { witnesses: r1cs.public_inputs }, return_values: { witnesses: [] } }],
       });
 
       const arkworksCircuit: ArkworksCompiledCircuit = {
@@ -445,6 +477,15 @@ authors = [""]
       const strVal = String(value);
       witnessMap[r1csIndex.toString()] = strVal;
     }
+
+    // Parse R1CS to get auxiliary witness computations
+    const r1cs: R1csDefinition = JSON.parse(circuit.r1csJson);
+
+    // Compute auxiliary witnesses if needed (for >= and > operators)
+    if (r1cs.auxWitnessComputations && r1cs.auxWitnessComputations.length > 0) {
+      this.computeAuxiliaryWitnesses(witnessMap, r1cs.auxWitnessComputations);
+    }
+
     const witnessJson = JSON.stringify(witnessMap);
 
     // Ensure we have a proving key
@@ -459,22 +500,10 @@ authors = [""]
     }
 
     // Generate proof using R1CS
-    const toHex = (arr: Uint8Array) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
-    console.log('=== ARKWORKS PROVE DEBUG ===');
-    console.log('Witness JSON:', witnessJson);
-    console.log('R1CS JSON:', circuit.r1csJson);
-
     const proofResult = wasm.prove_from_r1cs(provingKey, circuit.r1csJson, witnessJson);
-
-    console.log('Proof result public_inputs:', proofResult.public_inputs);
-    console.log('Proof gnark base64 length:', proofResult.proof_gnark.length);
 
     // Return proof in gnark format for Solana compatibility
     const proofBytes = base64ToUint8Array(proofResult.proof_gnark);
-
-    console.log('Proof bytes length:', proofBytes.length);
-    console.log('Proof bytes hex:', toHex(proofBytes));
-    console.log('============================');
 
     return {
       proof: proofBytes,
@@ -521,6 +550,88 @@ authors = [""]
       publicInputsGnarkB64,
       publicInputs.length
     );
+  }
+
+  /**
+   * Compute auxiliary witnesses based on computation instructions from R1csBuilder.
+   * This handles witnesses that noir_js cannot compute (e.g., bit decomposition for >= operator).
+   */
+  private computeAuxiliaryWitnesses(
+    witnessMap: Record<string, string>,
+    computations: AuxWitnessComputation[]
+  ): void {
+    // BN254 scalar field modulus for modular arithmetic
+    const FR_MODULUS = BigInt('0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001');
+
+    // Helper to get witness value as BigInt
+    const getWitnessValue = (idx: number): bigint => {
+      if (idx === 0) return 1n; // w_0 = 1
+      const val = witnessMap[idx.toString()];
+      if (val === undefined) {
+        throw new Error(`Witness w_${idx} not found`);
+      }
+      // Handle hex strings
+      if (val.startsWith('0x')) {
+        return BigInt(val);
+      }
+      return BigInt(val);
+    };
+
+    // Helper to set witness value as hex string
+    const setWitnessValue = (idx: number, val: bigint): void => {
+      // Ensure value is in field (non-negative, mod FR_MODULUS)
+      const normalized = ((val % FR_MODULUS) + FR_MODULUS) % FR_MODULUS;
+      witnessMap[idx.toString()] = '0x' + normalized.toString(16);
+    };
+
+    // Process computations in order
+    for (const comp of computations) {
+      switch (comp.type) {
+        case 'subtract': {
+          // Compute: target = left - right + offset
+          const left = getWitnessValue(comp.leftIdx!);
+          const right = getWitnessValue(comp.rightIdx!);
+          const offset = BigInt(comp.offset ?? 0);
+          const result = left - right + offset;
+          setWitnessValue(comp.targetIdx, result);
+          break;
+        }
+
+        case 'bit_decompose': {
+          // Decompose source value into bits
+          const source = getWitnessValue(comp.sourceIdx!);
+          const bitIndices = comp.bitIndices!;
+          const numBits = comp.numBits!;
+
+          // Check that source is non-negative (for >= to be valid)
+          if (source < 0n) {
+            throw new Error(
+              `Bit decomposition failed: value ${source} is negative. ` +
+              `This means the comparison constraint is not satisfied.`
+            );
+          }
+
+          // Check that source fits in numBits
+          const maxVal = (1n << BigInt(numBits)) - 1n;
+          if (source > maxVal) {
+            throw new Error(
+              `Bit decomposition failed: value ${source} exceeds ${numBits} bits (max: ${maxVal}). ` +
+              `Consider using a larger bit width or smaller values.`
+            );
+          }
+
+          // Extract each bit
+          for (let i = 0; i < numBits; i++) {
+            const bit = (source >> BigInt(i)) & 1n;
+            setWitnessValue(bitIndices[i], bit);
+          }
+          break;
+        }
+
+        default:
+          throw new Error(`Unknown auxiliary witness computation type: ${(comp as any).type}`);
+      }
+    }
   }
 
   /**

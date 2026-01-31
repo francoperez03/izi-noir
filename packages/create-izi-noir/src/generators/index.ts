@@ -2,7 +2,7 @@ export { generatePackageJson } from './package-json.js';
 export { generateTsconfig } from './tsconfig.js';
 export {
   generateBalanceProof,
-  generateAgeProof,
+  generateSquareProof,
   generateMinimalCircuit,
   generateCircuitsIndex,
   generateCircuitTypes,

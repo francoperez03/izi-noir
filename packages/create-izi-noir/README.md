@@ -28,7 +28,7 @@ npx create-izi-noir my-project --skip-install --skip-git
 ## Templates
 
 ### Default
-Includes balance proof and age proof circuit examples.
+Includes balance proof and square proof circuit examples.
 
 ### Minimal
 Empty circuit for starting from scratch.

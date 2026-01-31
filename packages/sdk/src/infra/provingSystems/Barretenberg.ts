@@ -2,6 +2,7 @@ import { compile, createFileManager } from '@noir-lang/noir_wasm';
 import { Noir } from '@noir-lang/noir_js';
 import { Barretenberg as BarretenbergBackend, UltraHonkBackend } from '@aztec/bb.js';
 import type { IProvingSystem } from '../../domain/interfaces/proving/IProvingSystem.js';
+import type { CompileOptions } from '../../domain/interfaces/proving/ICompiler.js';
 import type { CompiledCircuit, InputMap, ProofData } from '../../domain/types.js';
 
 /**
@@ -56,7 +57,9 @@ async function createTempDir(): Promise<{ basePath: string; cleanup: (() => Prom
  * Browser compatible, produces UltraHonk proofs (~16KB).
  */
 export class Barretenberg implements IProvingSystem {
-  async compile(noirCode: string): Promise<CompiledCircuit> {
+  // Note: options parameter is accepted but not used - Barretenberg uses Noir's ACIR directly
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async compile(noirCode: string, _options?: CompileOptions): Promise<CompiledCircuit> {
     const { basePath, cleanup } = await createTempDir();
     const fm = createFileManager(basePath);
 

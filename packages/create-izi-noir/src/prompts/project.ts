@@ -11,7 +11,7 @@ export interface ProjectOptions {
 }
 
 const TEMPLATES = [
-  { title: 'Default (balance + age proofs)', value: 'default' },
+  { title: 'Default (balance + square proofs)', value: 'default' },
   { title: 'Minimal (empty circuit)', value: 'minimal' },
   { title: 'Balance Proof only', value: 'balance-proof' },
 ];

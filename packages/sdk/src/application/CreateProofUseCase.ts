@@ -38,9 +38,9 @@ export class CreateProofUseCase {
     const noirCode = generateNoir(parsed);
     timings.generateMs = performance.now() - generateStart;
 
-    // 3. Compile Noir to bytecode
+    // 3. Compile Noir to bytecode (pass parsedCircuit for dynamic R1CS generation)
     const compileStart = performance.now();
-    const circuit = await this.deps.provingSystem.compile(noirCode);
+    const circuit = await this.deps.provingSystem.compile(noirCode, { parsedCircuit: parsed });
     timings.compileMs = performance.now() - compileStart;
 
     // 4. Build inputs object for witness generation
