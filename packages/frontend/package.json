@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "copy:wasm": "mkdir -p public/wasm/web && cp ../sdk/src/wasm/arkworks_groth16_wasm.js ../sdk/src/wasm/arkworks_groth16_wasm_bg.wasm public/wasm/web/",
+    "copy:wasm": "mkdir -p public/wasm/web && cp ../sdk/src/wasm/web/arkworks_groth16_wasm.js ../sdk/src/wasm/web/arkworks_groth16_wasm_bg.wasm public/wasm/web/",
     "build": "npm run copy:wasm && tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src/",
